@@ -58,7 +58,7 @@ fn render_tilemap(state: &mut RenderingState, tile_state :&TilemapState){
                                     let y = tile.id() / 3;
                                     let src = sdl2::rect::Rect::new((x*tile_width) as i32, (y*tile_height) as i32, tile_width, tile_height);
                                     // TODO: BŁAGAM NAPRAW TO
-                                    state.canvas.copy(txt, src, dst).unwrap();
+                                    state.canvas.copy_ex(txt, src, dst, 0.0, None, tile.flip_h, tile.flip_v).unwrap();
                                 }
                             }
                         }

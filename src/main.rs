@@ -35,6 +35,7 @@ pub fn main() -> Result<(), String> {
     let mut loader = tiled::Loader::new();
     let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
     load_tilemap_to_textures(&mut rendering_state, &mut start_map);
+    
     loop{
         let frame_timer = std::time::Instant::now();
 
@@ -42,7 +43,7 @@ pub fn main() -> Result<(), String> {
         if input_state.should_quit { break };
 
         render(&mut rendering_state, &mut start_map);
-        
+
         let frame_end_time = frame_timer.elapsed();
         println!("{}", 1.0/frame_end_time.as_secs_f64());
     }
