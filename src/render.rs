@@ -10,7 +10,9 @@ use sdl2::render::TextureCreator;
 use sdl2::video::Window;
 use sdl2::video::WindowContext;
 
-type TilemapState = tiled::Map;
+use crate::PlayerState;
+
+pub type TilemapState = tiled::Map;
 pub struct RenderingState{
     canvas: Canvas<Window>,
     texture_creator: TextureCreator<WindowContext>,
@@ -75,11 +77,18 @@ fn render_tilemap(state: &mut RenderingState, tile_state :&TilemapState){
 }
 
 
-pub fn render(state: &mut RenderingState, tile_state :&TilemapState){
+pub fn render(state: &mut RenderingState, tile_state :&TilemapState, player: &PlayerState){
     state.canvas.set_draw_color(Color::RGB(0, 0, 0));
     state.canvas.clear();
 
     render_tilemap(state,tile_state);
+
+    // render player
+    let (_, canvas_h) = state.canvas.logical_size();
+    let y = canvas_h as i32 - player.y as i32;
+    let dst = sdl2::rect::Rect::new(player.x as i32,y,player.width,player.height);
+    state.canvas.set_draw_color(Color::RGB(255, 255, 0));
+    state.canvas.fill_rect(dst);
 
     state.canvas.present();
 }

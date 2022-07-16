@@ -10,3 +10,4 @@ sdl2 = {version="0.35.2", features = ["image", "unsafe_textures"]}
 threadpool = "1.8.1"
 num_cpus = "1.13.1"
 tiled = "0.10.2"
+glam = "0.21.2"
