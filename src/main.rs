@@ -20,11 +20,12 @@ pub fn main() -> Result<(), String> {
     let window = video_subsystem
         .window("Project tomato", 1920, 1080)
         .position_centered()
+        .fullscreen_desktop()
         .build()
         .map_err(|e| e.to_string())?;
 
     let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    canvas.set_logical_size(320, 180).map_err(|e| e.to_string())?;
+    canvas.set_logical_size(320, 180).map_err(|e| e.to_string())?; // set later for resolution (320, 180) for 16:9 and (320, 240) for 4:3 etc
     let event_pump = sdl_context.event_pump()?;
 
     let mut rendering_state = RenderingState::new(canvas);
@@ -35,7 +36,7 @@ pub fn main() -> Result<(), String> {
     let mut loader = tiled::Loader::new();
     let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
     load_tilemap_to_textures(&mut rendering_state, &mut start_map);
-    
+
     loop{
         let frame_timer = std::time::Instant::now();
 
