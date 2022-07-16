@@ -1,62 +1,49 @@
 extern crate sdl2;
 
-use std::sync::Mutex;
+use std::collections::HashMap;
 
 use sdl2::EventPump;
 use sdl2::event::Event;
+use sdl2::image::LoadTexture;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
+use sdl2::render::{Canvas, Texture, TextureCreator};
+use sdl2::video::{Window, WindowContext};
 
 struct RenderingState{
     canvas: Canvas<Window>,
+    texture_creator: TextureCreator<WindowContext>,
 }
 struct InputState{
     event_pump: EventPump, 
     should_quit: bool,
 }
 
-struct TexturedRect<'a>{
-    x: i32,
-    y: i32,
-    w: u32,
-    h: u32,
-    txt: &'a sdl2::render::Texture<'a>,
-}
-
-struct TileState<'a>{
-    rects: Vec<TexturedRect<'a>>,
-}
+type TilemapState = tiled::Map;
 
 pub fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("Project tomato", 800, 600)
+        .window("Project tomato", 1920,1080 )
         .position_centered()
         //.opengl()
         .build()
         .map_err(|e| e.to_string())?;
 
-    let canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+    canvas.set_logical_size(320, 180).map_err(|e| e.to_string())?;
     let texture_creator = canvas.texture_creator();
     let event_pump = sdl_context.event_pump()?;
 
-    let mut rendering_state = RenderingState{canvas};
+    let mut rendering_state = RenderingState{canvas, texture_creator};
     let mut input_state = InputState{event_pump, should_quit:false};
 
     let _pool = threadpool::ThreadPool::new(num_cpus::get());
 
-    
-    let surface = sdl2::surface::Surface::new(512, 512, sdl2::pixels::PixelFormatEnum::RGB24).unwrap();
-    let texture = texture_creator.create_texture_from_surface(surface).unwrap();
-
-    let rect = TexturedRect{x:0,y:0,w:512,h:512,txt:&texture};
-    let rect2 = TexturedRect{x:522,y:0,w:512,h:512,txt:&texture};
-
-    let tile_state = TileState{rects:vec![rect,rect2]};
+    let mut loader = tiled::Loader::new();
+    let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
     
     loop{
         input(&mut input_state);
@@ -64,23 +51,62 @@ pub fn main() -> Result<(), String> {
         
         
 
-        render(&mut rendering_state, &tile_state);
+        render(&mut rendering_state, &mut start_map);
     }
-
-    
 
     Ok(())
 }
 
-fn render(state: &mut RenderingState, tile_state: &TileState){
+fn render(state: &mut RenderingState, tile_state :&TilemapState){
     let canvas = &mut state.canvas;
-    canvas.set_draw_color(Color::RGB(255, 1, 1));
+    canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
 
-    for rect in tile_state.rects.iter(){
-        let r = sdl2::rect::Rect::new(rect.x,rect.y,rect.w,rect.h);
-        canvas.copy(rect.txt, None, r);
+    // render tilemap
+    let mut textures: HashMap<String, Texture> = HashMap::new();
+    for tileset in tile_state.tilesets().to_owned(){
+        let image = tileset.image.as_ref().unwrap();
+        let path = image.source.as_os_str().to_str().unwrap();
+        let txt = state.texture_creator.load_texture(path).unwrap();
+        let name = tileset.name.clone();
+        textures.insert(name, txt);
     }
+    for layer in tile_state.layers(){
+        match layer.layer_type(){
+            tiled::LayerType::TileLayer(tile_layer) => {
+                match tile_layer{
+                    tiled::TileLayer::Finite(tiles) => {
+                        let width = tiles.width();
+                        let height = tiles.height();
+                        for i in 0..height{
+                            for j in 0..width{
+                                if let Some(tile) = tiles.get_tile(j as i32, i as i32){
+                                    let x = tile.get_tile().unwrap();
+                                    let tilemap_id = x.tileset().name.clone();
+                                    let txt = textures.get(&tilemap_id).unwrap();
+
+                                    let tile_width = x.tileset().tile_width;
+                                    let tile_height = x.tileset().tile_height;
+
+                                    let dst = sdl2::rect::Rect::new((j*tile_width) as i32, (i*tile_height) as i32,tile_width,tile_height);
+                                    let x = tile.id() % (3); // 3 is tiles in tileset
+                                    let y = tile.id() / 3;
+                                    let src = sdl2::rect::Rect::new((x*tile_width) as i32, (y*tile_height) as i32, tile_width, tile_height);
+                                    // TODO: BŁAGAM NAPRAW TO
+                                    canvas.copy(txt, src, dst).unwrap();
+                                }
+                            }
+                        }
+                    },
+                    tiled::TileLayer::Infinite(_) => panic!("NOT IMPLEMENTED"),
+                }
+            },
+            tiled::LayerType::ObjectLayer(_) =>  panic!("NOT IMPLEMENTED"),
+            tiled::LayerType::ImageLayer(_) =>  panic!("NOT IMPLEMENTED"),
+            tiled::LayerType::GroupLayer(_) =>  panic!("NOT IMPLEMENTED"),
+        }
+    }
+
 
     canvas.present();
 }
