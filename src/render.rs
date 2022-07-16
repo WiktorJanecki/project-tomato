@@ -36,6 +36,7 @@ pub fn load_tilemap_to_textures(state: &mut RenderingState, tile_state :&Tilemap
 }
 
 fn render_tilemap(state: &mut RenderingState, tile_state :&TilemapState){
+    let (_, canvas_h) = state.canvas.logical_size();
     for layer in tile_state.layers(){
         match layer.layer_type(){
             tiled::LayerType::TileLayer(tile_layer) => {
@@ -45,7 +46,7 @@ fn render_tilemap(state: &mut RenderingState, tile_state :&TilemapState){
                         let height = tiles.height();
                         for i in 0..height{
                             for j in 0..width{
-                                if let Some(tile) = tiles.get_tile(j as i32, i as i32){
+                                if let Some(tile) = tiles.get_tile(j as i32,  (i as i32)){
                                     let x = tile.get_tile().unwrap();
                                     let tilemap_id = x.tileset().name.clone();
                                     let txt = state.textures.get(&tilemap_id).unwrap();
@@ -53,7 +54,8 @@ fn render_tilemap(state: &mut RenderingState, tile_state :&TilemapState){
                                     let tile_width = x.tileset().tile_width;
                                     let tile_height = x.tileset().tile_height;
 
-                                    let dst = sdl2::rect::Rect::new((j*tile_width) as i32, (i*tile_height) as i32,tile_width,tile_height);
+                                    let tile_y_converted = (canvas_h).abs_diff(tile_height * height) as i32 + (i*tile_height) as i32;
+                                    let dst = sdl2::rect::Rect::new((j*tile_width) as i32, tile_y_converted,tile_width,tile_height);
                                     let x = tile.id() % (3); // 3 is tiles in tileset
                                     let y = tile.id() / 3;
                                     let src = sdl2::rect::Rect::new((x*tile_width) as i32, (y*tile_height) as i32, tile_width, tile_height);
