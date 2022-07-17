@@ -2,7 +2,6 @@ extern crate sdl2;
 
 use std::collections::HashMap;
 
-use glam::Vec2;
 use sdl2::EventPump;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -34,6 +33,10 @@ pub struct PlayerState{
     wants_dir: f32,
     added_velocity: f32,
     acceleration: f32,
+    acceleration_y: f32,
+    velocity_y: f32,
+    wants_to_jump: bool,
+    is_grounded:bool,
 }
 
 
@@ -61,14 +64,14 @@ pub fn main() -> Result<(), String> {
     let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
     load_tilemap_to_textures(&mut rendering_state, &mut start_map);
 
-    let mut player_state = PlayerState{player_sprite_path: "player.png", width:8, height:16, anim_x:0,anim_y:0,wants_dir:0.0, added_velocity:0.0, x: 30.0, y: 100.0, acceleration:0.0, friction: 1.0, hitbox: Collider { x: 0, y: 0, w: 8, h: 16 }};
+    let mut player_state = PlayerState{acceleration_y: 0.0,is_grounded: false,wants_to_jump: false,velocity_y: 0.0,player_sprite_path: "player.png", width:8, height:16, anim_x:0,anim_y:0,wants_dir:0.0, added_velocity:0.0, x: 30.0, y: 100.0, acceleration:0.0, friction: 1.0, hitbox: Collider { x: 0, y: 0, w: 8, h: 16 }};
     let mut physics_state = PhysicsState::default();
     load_tilemap_to_physics(&mut physics_state, &start_map);
 
     loop{
         let frame_timer = std::time::Instant::now();
-        let mut render_player_state = player_state.clone();
-        let mut render_physics_state = physics_state.clone();
+        let render_player_state = player_state.clone();
+        let render_physics_state = physics_state.clone();
 
         input(&mut input_state);
         move_player(&mut player_state, &input_state);
@@ -77,7 +80,7 @@ pub fn main() -> Result<(), String> {
             physics(&mut physics_state,&mut player_state);
             return (physics_state, player_state);
         });
-        render(&mut rendering_state, &mut start_map, &mut render_player_state, &render_physics_state);
+        render(&mut rendering_state, &mut start_map, &render_player_state, &render_physics_state);
         let (x, y) = handle.join().unwrap();
         physics_state = x;
         player_state = y;
@@ -103,7 +106,6 @@ fn load_tilemap_to_physics(state: &mut PhysicsState, tile_state: &TilemapState){
                             let w = width as u32;
                             let h = height as u32;
                             let col = Collider{x,y,w,h};
-                            println!("col {x} {y} {w} {h}");
                             colliders.push(col);
                         },
                         _=>{},
@@ -121,51 +123,96 @@ fn physics(state: &mut PhysicsState, player: &mut PlayerState){
     let dt = (now.duration_since(state.dt_timer).as_secs_f64()) as f32;
     state.dt_timer = std::time::Instant::now();
 
-    let obj = player;
+    let mut obj = player;
+
+    // TODO: FALLING FRICTION coyote time and jump buffering
     
-    let max_speed = 8000.0;
-    let accel = 8000.0;
+    const max_speed: f32 = 150.0;
+    const fri: f32 = 500.0;
+    const min_fri: f32 = 10.0;
+    const accel: f32 = 500.0 + fri;
     obj.acceleration = obj.wants_dir * accel; 
-    obj.added_velocity = obj.acceleration * dt;
+    obj.added_velocity += obj.acceleration * dt;
     if obj.added_velocity > max_speed {obj.added_velocity = max_speed}
     if obj.added_velocity < -max_speed {obj.added_velocity = -max_speed}
+    
+    const gravity: f32 = 800.0;
+    obj.velocity_y += gravity * dt;
 
     let mut is_colliding_x = false;
     let mut is_colliding_y = false;
 
+    let jump_force = 350.0;
+    if obj.wants_to_jump && obj.is_grounded {
+        obj.velocity_y = -jump_force;
+        obj.wants_to_jump = false;
+    }
+
+    // friction
+    if obj.added_velocity > 0.0{
+        obj.added_velocity -= fri * dt;
+    }
+    if obj.added_velocity < 0.0{
+        obj.added_velocity += fri*dt;
+    }
+    if obj.added_velocity.abs() < min_fri && obj.wants_dir == 0.0{
+        obj.added_velocity = 0.0;
+    }
+
     let nx = obj.x + obj.added_velocity * dt;
-    let ny = obj.y + -1.0*dt;// + obj.added_velocity * dt);
+    let ny = obj.y + obj.velocity_y*dt;
     let ox = nx + obj.hitbox.x as f32;
-    let oy = nx + obj.hitbox.y as f32;
+    let oy = ny + obj.hitbox.y as f32;
     let ow = obj.hitbox.w;
     let oh = obj.hitbox.h;
 
+    obj.is_grounded = false;
+
     for col in state.colliders.iter(){
-        if  (ox as i32) < col.x + col.w as i32 &&
-            ox as i32 + ow as i32 > col.x{
+        if  (ox as i32 + ow as i32) > (col.x as i32) && (col.x as i32 + col.w as i32) > (ox as i32)
+         && (obj.y as i32)  < (col.y as i32 + col.h as i32) && (obj.y as i32 + oh as i32) > (col.y as i32){
                 is_colliding_x = true;
             }
-            if (oy as i32) < col.y + col.h as i32 &&
-            oh as i32 + oy as i32 > col.y{
+        if  (obj.x as i32 + ow as i32) > (col.x as i32) && (col.x as i32 + col.w as i32) > (obj.x as i32)
+         && (oy as i32)  < (col.y as i32 + col.h as i32) && (oy as i32 + oh as i32) > (col.y as i32){
                 is_colliding_y = true;
+                if oy as i32 >= obj.y as i32{
+                    obj.is_grounded = true;
+                    obj.velocity_y = 0.0;
+                }
             }
     }
+
 
     if !is_colliding_x{obj.x = nx;}
     if !is_colliding_y{obj.y = ny;}
 
 }
 fn move_player(player: &mut PlayerState, input: &InputState){
+    let mut wanna_move = false;
     if get_key(sdl2::keyboard::Keycode::Left, input){
         player.wants_dir = -1.0;
+        wanna_move = true;
     }
     if get_key(sdl2::keyboard::Keycode::Right, input){
         player.wants_dir = 1.0;
+        wanna_move = true;
+    }
+    if get_key_pressed(sdl2::keyboard::Keycode::Up, input){
+        player.wants_to_jump = true;    
+    } 
+    else{
+        player.wants_to_jump = false;
+    }
+    if !wanna_move{
+        player.wants_dir = 0.0;
     }
 }
 
 fn input(state: &mut InputState){
     let event_pump = &mut state.event_pump;
+    state.key_pressed_state.clear();
+    state.key_released_state.clear();
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. } => {state.should_quit = true; return;},
@@ -187,4 +234,8 @@ fn input(state: &mut InputState){
 
 fn get_key(key: sdl2::keyboard::Keycode, input: &InputState) -> bool{
     if let Some(s) = input.key_state.get(&key) { return *s } else{ return false};
+}
+
+fn get_key_pressed(key: sdl2::keyboard::Keycode, input: &InputState) -> bool{
+    if let Some(s) = input.key_pressed_state.get(&key) { return *s } else{ return false};
 }

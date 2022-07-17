@@ -1,7 +1,3 @@
-use std::default;
-
-use glam::Vec2;
-
 #[derive(Default,Clone)]
 pub struct Collider{
     pub x: i32,
