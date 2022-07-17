@@ -11,6 +11,7 @@ use sdl2::video::Window;
 use sdl2::video::WindowContext;
 
 use crate::PlayerState;
+use crate::PhysicsState;
 
 pub type TilemapState = tiled::Map;
 pub struct RenderingState{
@@ -56,7 +57,8 @@ fn render_tilemap(state: &mut RenderingState, tile_state :&TilemapState){
                                     let tile_width = tile_prop.tileset().tile_width; // width of tile in pixels
                                     let tile_height = tile_prop.tileset().tile_height;
 
-                                    let tile_y_converted = (canvas_h).abs_diff(tile_height * height) as i32 + (i*tile_height) as i32; // convert tile y coord to render from bottom left instead of sdl upper left
+ //                                   let tile_y_converted = (canvas_h).abs_diff(tile_height * height) as i32 + (i*tile_height) as i32; // convert tile y coord to render from bottom left instead of sdl upper left
+                                                                                                                                                               let tile_y_converted = i as i32*tile_height as i32;
                                     let dst = sdl2::rect::Rect::new((j*tile_width) as i32, tile_y_converted,tile_width,tile_height); // where to render
                                     let x = tile.id() % (tile_prop.tileset().columns); // position in tileset
                                     let y = tile.id() / (tile_prop.tileset().tilecount / tile_prop.tileset().columns); // position in tileset
@@ -77,7 +79,7 @@ fn render_tilemap(state: &mut RenderingState, tile_state :&TilemapState){
 }
 
 
-pub fn render(state: &mut RenderingState, tile_state :&TilemapState, player: &PlayerState){
+pub fn render(state: &mut RenderingState, tile_state :&TilemapState, player: &PlayerState, physics: &PhysicsState){
     state.canvas.set_draw_color(Color::RGB(0, 0, 0));
     state.canvas.clear();
 
@@ -85,10 +87,24 @@ pub fn render(state: &mut RenderingState, tile_state :&TilemapState, player: &Pl
 
     // render player
     let (_, canvas_h) = state.canvas.logical_size();
-    let y = canvas_h as i32 - player.y as i32;
+    //let y = canvas_h as i32 - player.y as i32;
+    let y = player.y as i32;
     let dst = sdl2::rect::Rect::new(player.x as i32,y,player.width,player.height);
     state.canvas.set_draw_color(Color::RGB(255, 255, 0));
     state.canvas.fill_rect(dst);
 
+    render_colliders(state,player,physics);
+
     state.canvas.present();
+}
+
+pub fn render_colliders(state: &mut RenderingState, player: &PlayerState, physics: &PhysicsState){
+    state.canvas.set_draw_color(Color::RGB(255,0,0));
+    for col in physics.colliders.iter(){
+        let rect = sdl2::rect::Rect::new(col.x, col.y, col.w,col.h);
+        state.canvas.draw_rect(rect);
+    }
+    let player_rect = sdl2::rect::Rect::new(player.x as i32 + player.hitbox.x, player.y as i32 + player.hitbox.y,player.hitbox.w,player.hitbox.h);
+    state.canvas.set_draw_color(Color::RGB(255,0,255));
+    state.canvas.draw_rect(player_rect);
 }

@@ -29,12 +29,11 @@ pub struct PlayerState{
     anim_y: u32,
     x: f32,
     y: f32,
-    velocity: Vec2,
-    acceleration: Vec2,
     friction: f32,
     hitbox: Collider,
-    wants_dir: Vec2,
-    added_velocity: Vec2,
+    wants_dir: f32,
+    added_velocity: f32,
+    acceleration: f32,
 }
 
 
@@ -43,9 +42,9 @@ pub fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("Project tomato", 1920, 1080)
+        .window("Project tomato",1280,720)
         .position_centered()
-        .fullscreen_desktop()
+        //.fullscreen_desktop()
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -62,12 +61,14 @@ pub fn main() -> Result<(), String> {
     let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
     load_tilemap_to_textures(&mut rendering_state, &mut start_map);
 
-    let mut player_state = PlayerState{player_sprite_path: "player.png", width:8, height:16, anim_x:0,anim_y:0,wants_dir:Vec2::ZERO, added_velocity:Vec2::ZERO, x: 0.0, y: 16.0, velocity: Vec2::ZERO, acceleration: Vec2::ZERO, friction: 1.0, hitbox: Collider { x: 0, y: 0, w: 8, h: 16 }};
+    let mut player_state = PlayerState{player_sprite_path: "player.png", width:8, height:16, anim_x:0,anim_y:0,wants_dir:0.0, added_velocity:0.0, x: 30.0, y: 100.0, acceleration:0.0, friction: 1.0, hitbox: Collider { x: 0, y: 0, w: 8, h: 16 }};
     let mut physics_state = PhysicsState::default();
+    load_tilemap_to_physics(&mut physics_state, &start_map);
 
     loop{
         let frame_timer = std::time::Instant::now();
         let mut render_player_state = player_state.clone();
+        let mut render_physics_state = physics_state.clone();
 
         input(&mut input_state);
         move_player(&mut player_state, &input_state);
@@ -76,14 +77,14 @@ pub fn main() -> Result<(), String> {
             physics(&mut physics_state,&mut player_state);
             return (physics_state, player_state);
         });
-        render(&mut rendering_state, &mut start_map, &mut render_player_state);
+        render(&mut rendering_state, &mut start_map, &mut render_player_state, &render_physics_state);
         let (x, y) = handle.join().unwrap();
         physics_state = x;
         player_state = y;
 
         let frame_end_time = frame_timer.elapsed();
         std::thread::sleep(std::time::Duration::from_millis(16));
-        println!("{}", 1.0/frame_end_time.as_secs_f64());
+        //println!("{}", 1.0/frame_end_time.as_secs_f64());
     }
 
     Ok(())
@@ -102,6 +103,7 @@ fn load_tilemap_to_physics(state: &mut PhysicsState, tile_state: &TilemapState){
                             let w = width as u32;
                             let h = height as u32;
                             let col = Collider{x,y,w,h};
+                            println!("col {x} {y} {w} {h}");
                             colliders.push(col);
                         },
                         _=>{},
@@ -117,28 +119,22 @@ fn load_tilemap_to_physics(state: &mut PhysicsState, tile_state: &TilemapState){
 fn physics(state: &mut PhysicsState, player: &mut PlayerState){
     let now = std::time::Instant::now();
     let dt = (now.duration_since(state.dt_timer).as_secs_f64()) as f32;
-    println!("DELTA: {dt}");
     state.dt_timer = std::time::Instant::now();
 
-    for  i in 0..999{
-        let j = i*2;
-    }
-
     let obj = player;
-    obj.velocity += obj.acceleration * dt;
     
-    let max_speed = 5.0;
-    let accel = 5.0;
-    obj.added_velocity = accel*obj.wants_dir.normalize()*dt;
-    obj.added_velocity.clamp_length_max(max_speed);
+    let max_speed = 8000.0;
+    let accel = 8000.0;
+    obj.acceleration = obj.wants_dir * accel; 
+    obj.added_velocity = obj.acceleration * dt;
+    if obj.added_velocity > max_speed {obj.added_velocity = max_speed}
+    if obj.added_velocity < -max_speed {obj.added_velocity = -max_speed}
 
     let mut is_colliding_x = false;
     let mut is_colliding_y = false;
 
-    let nx = obj.x + (obj.velocity.x * dt) + (obj.added_velocity.x * dt);
-    dbg!(obj.x);
-    dbg!(obj.added_velocity.x);
-    let ny = obj.y + (obj.velocity.y * dt) + (obj.added_velocity.y * dt);
+    let nx = obj.x + obj.added_velocity * dt;
+    let ny = obj.y + -1.0*dt;// + obj.added_velocity * dt);
     let ox = nx + obj.hitbox.x as f32;
     let oy = nx + obj.hitbox.y as f32;
     let ow = obj.hitbox.w;
@@ -161,16 +157,10 @@ fn physics(state: &mut PhysicsState, player: &mut PlayerState){
 }
 fn move_player(player: &mut PlayerState, input: &InputState){
     if get_key(sdl2::keyboard::Keycode::Left, input){
-        player.wants_dir.x = -1.0;
+        player.wants_dir = -1.0;
     }
     if get_key(sdl2::keyboard::Keycode::Right, input){
-        player.wants_dir.x = 1.0;
-    }
-    if get_key(sdl2::keyboard::Keycode::Up, input){
-        player.wants_dir.y = -1.0;
-    }
-    if get_key(sdl2::keyboard::Keycode::Down, input){
-        player.wants_dir.y = 1.0;
+        player.wants_dir = 1.0;
     }
 }
 

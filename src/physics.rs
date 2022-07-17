@@ -10,6 +10,7 @@ pub struct Collider{
     pub h: u32
 }
 
+#[derive(Clone)]
 pub struct PhysicsState{
     pub dt: f32,
     pub dt_timer: std::time::Instant,
