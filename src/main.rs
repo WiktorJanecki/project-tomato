@@ -39,15 +39,15 @@ pub struct PlayerState {
 }
 
 impl PlayerState {
-    fn new(x: i32, y: i32) -> Self {
+    fn new(x: f32, y: f32) -> Self {
         Self {
             _player_sprite_path: "res/player.png",
             width: 8,
             height: 16,
             _anim_x: 0,
             _anim_y: 0,
-            x: x as f32,
-            y: y as f32,
+            x:x,
+            y:y,
             hitbox: Collider {
                 x: 0,
                 y: 0,
@@ -97,7 +97,8 @@ pub fn main() -> Result<(), String> {
     let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
     load_tilemap_to_textures(&mut rendering_state, &mut start_map);
 
-    let mut player_state = PlayerState::new(30, 120);
+    let (x,y) =  get_player_spawn_position(&start_map);
+    let mut player_state = PlayerState::new(x, y);
     let mut physics_state = PhysicsState::default();
     load_tilemap_to_physics(&mut physics_state, &start_map);
 
@@ -137,6 +138,26 @@ pub fn main() -> Result<(), String> {
     Ok(())
 }
 
+fn get_player_spawn_position(tile: &TilemapState) -> (f32, f32){
+    for layer in tile.layers(){
+        if layer.name == "PlayerSpawners"{
+            match layer.layer_type(){
+                tiled::LayerType::TileLayer(_) => {},
+                tiled::LayerType::ObjectLayer(obj) => {
+                    for o in obj.objects(){
+                        if o.name == "PlayerSpawn"{
+                            return (o.x, o.y - 16.0); // obj origin is bottom left in tiled whereas top left in sdl
+                        }
+                    }
+                },
+                tiled::LayerType::ImageLayer(_) => {},
+                tiled::LayerType::GroupLayer(_) => {},
+            }
+        }
+    }
+    panic!("PLAYER SPAWN NOT FOUND");
+}
+
 fn move_player(player: &mut PlayerState, input: &InputState) {
     let mut wanna_move = false;
     if get_key(sdl2::keyboard::Keycode::Left, input) {
@@ -147,7 +168,7 @@ fn move_player(player: &mut PlayerState, input: &InputState) {
         player.wants_dir = 1.0;
         wanna_move = true;
     }
-    if get_key_pressed(sdl2::keyboard::Keycode::Up, input) {
+    if get_key_pressed(sdl2::keyboard::Keycode::Z, input) {
         player.wants_to_jump = true;
     } else {
         player.wants_to_jump = false;

@@ -112,7 +112,7 @@ pub fn render(
     state.canvas.set_draw_color(Color::RGB(255, 255, 0));
     state.canvas.fill_rect(dst).unwrap();
 
-    //_render_colliders(state,player,physics);
+    //_render_colliders(state,player,_physics);
 
     state.canvas.present();
 }

@@ -28,23 +28,25 @@ impl Default for PhysicsState {
 pub fn load_tilemap_to_physics(state: &mut PhysicsState, tile_state: &TilemapState) {
     let mut colliders: Vec<Collider> = vec![];
     for layer in tile_state.layers() {
-        match layer.layer_type() {
-            tiled::LayerType::ObjectLayer(obj_layer) => {
-                for obj in obj_layer.objects() {
-                    match obj.shape {
-                        tiled::ObjectShape::Rect { width, height } => {
-                            let x = obj.x as i32;
-                            let y = obj.y as i32;
-                            let w = width as u32;
-                            let h = height as u32;
-                            let col = Collider { x, y, w, h };
-                            colliders.push(col);
+        if layer.name == "Colliders" {
+            match layer.layer_type() {
+                tiled::LayerType::ObjectLayer(obj_layer) => {
+                    for obj in obj_layer.objects() {
+                        match obj.shape {
+                            tiled::ObjectShape::Rect { width, height } => {
+                                let x = obj.x as i32;
+                                let y = obj.y as i32;
+                                let w = width as u32;
+                                let h = height as u32;
+                                let col = Collider { x, y, w, h };
+                                colliders.push(col);
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
+                _ => {}
             }
-            _ => {}
         }
     }
     state.colliders.append(&mut colliders);
