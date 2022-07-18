@@ -67,6 +67,8 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     let gravity: f32 = 800.0;
     let coyote_time: f32 = 0.1;
     let jump_buffer_time: f32 = 0.1;
+    let wall_jump_force = 300.0;
+    let jump_force = 350.0;
 
     // MOVE LEFT-RIGHT = ADDED_VELOCITY
     // JUMP AND GRAVITY = VELOCITY
@@ -89,15 +91,16 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
         obj.jump_buffer_counter -= dt;
     }
 
-    let jump_force = 350.0;
+    //jumping
     if obj.jump_buffer_counter > 0.0 && obj.coyote_time_counter > 0.0 {
         obj.velocity.y = -jump_force;
         obj.wants_to_jump = false;
         obj.coyote_time_counter = 0.0;
         obj.jump_buffer_counter = 0.0;
     }
+    // wall jumping
     if obj.jump_buffer_counter > 0.0 && obj.is_sliding{
-        obj.added_velocity.x = -obj.wants_dir * max_speed * 2.0;
+        obj.added_velocity.x = -obj.wants_dir * wall_jump_force;
         obj.velocity.y = -jump_force;
         obj.wants_to_jump = false;
 
