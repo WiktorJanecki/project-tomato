@@ -14,6 +14,7 @@ use crate::PlayerState;
 pub type TilemapState = tiled::Map;
 pub struct RenderingState {
     canvas: Canvas<Window>,
+    camera: sdl2::rect::Rect,
     texture_creator: TextureCreator<WindowContext>,
     textures: HashMap<String, Texture>,
 }
@@ -24,6 +25,7 @@ impl RenderingState {
         RenderingState {
             canvas,
             texture_creator,
+            camera: sdl2::rect::Rect::new(0,0,0,0),  // camera width = map width etc
             textures: HashMap::new(),
         }
     }
@@ -37,6 +39,8 @@ pub fn load_tilemap_to_textures(state: &mut RenderingState, tile_state: &Tilemap
         let name = tileset.name.clone();
         state.textures.insert(name, txt);
     }
+    state.camera.set_width(tile_state.width * tile_state.tile_width);
+    state.camera.set_height(tile_state.height * tile_state.tile_height);
 }
 
 fn render_tilemap(state: &mut RenderingState, tile_state: &TilemapState) {
@@ -58,8 +62,8 @@ fn render_tilemap(state: &mut RenderingState, tile_state: &TilemapState) {
                                     let tile_height = tile_prop.tileset().tile_height;
 
                                     let dst = sdl2::rect::Rect::new(
-                                        (j * tile_width) as i32,
-                                        (i * tile_height) as i32,
+                                        (j * tile_width) as i32 + state.camera.x,
+                                        (i * tile_height) as i32 + state.camera.y,
                                         tile_width,
                                         tile_height,
                                     ); // where to render
@@ -99,13 +103,35 @@ pub fn render(
 ) {
     state.canvas.set_draw_color(Color::RGB(0, 0, 0));
     state.canvas.clear();
+    let (canvas_w, canvas_h) = state.canvas.logical_size();
+
+    // center camera to player,
+    // camera x and y are inverted (*-1) therefore every calculation must be inverted too
+    state.camera.set_x(-(player.x as i32 + player.width as i32/2) + canvas_w as i32 /2);
+    state.camera.set_y(-(player.y as i32 + player.height as i32/2) + canvas_h as i32/2);
+
+
+    //set camera bounds
+    if state.camera.x > 0{
+        state.camera.set_x(0);
+    }
+    if state.camera.y > 0{
+        state.camera.set_y(0);
+    }
+    if (-state.camera.x + canvas_w as i32) > state.camera.width() as i32{
+        state.camera.set_x(state.camera.width() as i32 * -1  +canvas_w as i32);
+    }
+    if (-state.camera.y + canvas_h as i32) > state.camera.height() as i32{
+        state.camera.set_y(state.camera.height() as i32 * -1 + canvas_h as i32);
+    }
+
 
     render_tilemap(state, tile_state);
 
     // render player
     let dst = sdl2::rect::Rect::new(
-        player.x as i32,
-        player.y as i32,
+        player.x as i32 + state.camera.x,
+        player.y as i32 + state.camera.y,
         player.width,
         player.height,
     );
@@ -124,8 +150,8 @@ pub fn _render_colliders(state: &mut RenderingState, player: &PlayerState, physi
         state.canvas.draw_rect(rect).unwrap();
     }
     let player_rect = sdl2::rect::Rect::new(
-        player.x as i32 + player.hitbox.x,
-        player.y as i32 + player.hitbox.y,
+        player.x as i32 + player.hitbox.x + state.camera.x,
+        player.y as i32 + player.hitbox.y + state.camera.y,
         player.hitbox.w,
         player.hitbox.h,
     );

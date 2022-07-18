@@ -79,7 +79,7 @@ pub fn main() -> Result<(), String> {
     let window = video_subsystem
         .window("Project tomato", 1280, 720)
         .position_centered()
-        //.fullscreen_desktop()
+        .fullscreen_desktop()
         .build()
         .map_err(|e| e.to_string())?;
 
