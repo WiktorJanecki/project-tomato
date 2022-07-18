@@ -36,6 +36,9 @@ pub struct PlayerState {
     acceleration: Vec2,
     wants_to_jump: bool,
     is_grounded: bool,
+    is_falling: bool,
+    coyote_time_counter: f32,
+    jump_buffer_counter: f32,
 }
 
 impl PlayerState {
@@ -46,8 +49,8 @@ impl PlayerState {
             height: 16,
             _anim_x: 0,
             _anim_y: 0,
-            x:x,
-            y:y,
+            x: x,
+            y: y,
             hitbox: Collider {
                 x: 0,
                 y: 0,
@@ -60,6 +63,9 @@ impl PlayerState {
             acceleration: Vec2::ZERO,
             wants_to_jump: false,
             is_grounded: false,
+            is_falling: false,
+            coyote_time_counter: 0.0,
+            jump_buffer_counter: 0.0,
         }
     }
 }
@@ -97,7 +103,7 @@ pub fn main() -> Result<(), String> {
     let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
     load_tilemap_to_textures(&mut rendering_state, &mut start_map);
 
-    let (x,y) =  get_player_spawn_position(&start_map);
+    let (x, y) = get_player_spawn_position(&start_map);
     let mut player_state = PlayerState::new(x, y);
     let mut physics_state = PhysicsState::default();
     load_tilemap_to_physics(&mut physics_state, &start_map);
@@ -138,20 +144,20 @@ pub fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn get_player_spawn_position(tile: &TilemapState) -> (f32, f32){
-    for layer in tile.layers(){
-        if layer.name == "PlayerSpawners"{
-            match layer.layer_type(){
-                tiled::LayerType::TileLayer(_) => {},
+fn get_player_spawn_position(tile: &TilemapState) -> (f32, f32) {
+    for layer in tile.layers() {
+        if layer.name == "PlayerSpawners" {
+            match layer.layer_type() {
+                tiled::LayerType::TileLayer(_) => {}
                 tiled::LayerType::ObjectLayer(obj) => {
-                    for o in obj.objects(){
-                        if o.name == "PlayerSpawn"{
+                    for o in obj.objects() {
+                        if o.name == "PlayerSpawn" {
                             return (o.x, o.y - 16.0); // obj origin is bottom left in tiled whereas top left in sdl
                         }
                     }
-                },
-                tiled::LayerType::ImageLayer(_) => {},
-                tiled::LayerType::GroupLayer(_) => {},
+                }
+                tiled::LayerType::ImageLayer(_) => {}
+                tiled::LayerType::GroupLayer(_) => {}
             }
         }
     }

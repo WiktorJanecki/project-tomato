@@ -59,13 +59,13 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
 
     let mut obj = player;
 
-    // TODO: FALLING FRICTION coyote time and jump buffering
-
     let max_speed: f32 = 150.0;
     let fri: f32 = 500.0;
     let min_fri: f32 = 10.0;
     let accel: f32 = 500.0 + fri;
     let gravity: f32 = 800.0;
+    let coyote_time: f32 = 0.1;
+    let jump_buffer_time: f32 = 0.1;
 
     // MOVE LEFT-RIGHT = ADDED_VELOCITY
     // JUMP AND GRAVITY = VELOCITY
@@ -76,13 +76,24 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
 
     obj.velocity.y += gravity * dt;
 
-    let mut is_colliding_x = false;
-    let mut is_colliding_y = false;
+    if obj.is_grounded {
+        obj.coyote_time_counter = coyote_time;
+    } else {
+        obj.coyote_time_counter -= dt;
+    }
+
+    if obj.wants_to_jump{
+        obj.jump_buffer_counter = jump_buffer_time;
+    } else {
+        obj.jump_buffer_counter -= dt;
+    }
 
     let jump_force = 350.0;
-    if obj.wants_to_jump && obj.is_grounded {
+    if obj.jump_buffer_counter > 0.0 && obj.coyote_time_counter > 0.0 {
         obj.velocity.y = -jump_force;
         obj.wants_to_jump = false;
+        obj.coyote_time_counter = 0.0;
+        obj.jump_buffer_counter = 0.0;
     }
 
     // friction
@@ -105,6 +116,8 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     let oh = obj.hitbox.h;
 
     obj.is_grounded = false;
+    let mut is_colliding_x = false;
+    let mut is_colliding_y = false;
 
     for col in state.colliders.iter() {
         if (ox as i32 + ow as i32) > (col.x as i32)
@@ -113,6 +126,7 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
             && (obj.y as i32 + oh as i32) > (col.y as i32)
         {
             is_colliding_x = true;
+            obj.velocity.x = 0.0;
         }
         if (obj.x as i32 + ow as i32) > (col.x as i32)
             && (col.x as i32 + col.w as i32) > (obj.x as i32)
@@ -120,9 +134,9 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
             && (oy as i32 + oh as i32) > (col.y as i32)
         {
             is_colliding_y = true;
+            obj.velocity.y = 0.0;
             if oy as i32 >= obj.y as i32 {
                 obj.is_grounded = true;
-                obj.velocity.y = 0.0;
             }
         }
     }
