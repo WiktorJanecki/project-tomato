@@ -37,6 +37,7 @@ pub struct PlayerState {
     wants_to_jump: bool,
     is_grounded: bool,
     is_falling: bool,
+    is_sliding: bool,
     coyote_time_counter: f32,
     jump_buffer_counter: f32,
 }
@@ -64,6 +65,7 @@ impl PlayerState {
             wants_to_jump: false,
             is_grounded: false,
             is_falling: false,
+            is_sliding: false,
             coyote_time_counter: 0.0,
             jump_buffer_counter: 0.0,
         }

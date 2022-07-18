@@ -60,6 +60,7 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     let mut obj = player;
 
     let max_speed: f32 = 150.0;
+    let sliding_speed: f32 = 100.0;
     let fri: f32 = 500.0;
     let min_fri: f32 = 10.0;
     let accel: f32 = 500.0 + fri;
@@ -95,6 +96,18 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
         obj.coyote_time_counter = 0.0;
         obj.jump_buffer_counter = 0.0;
     }
+    if obj.jump_buffer_counter > 0.0 && obj.is_sliding{
+        obj.added_velocity.x = -obj.wants_dir * max_speed * 2.0;
+        obj.velocity.y = -jump_force;
+        obj.wants_to_jump = false;
+
+    }
+
+    if obj.is_sliding{
+        if obj.velocity.y > sliding_speed{
+            obj.velocity.y = sliding_speed;
+        }
+    }
 
     // friction
     if obj.added_velocity.x > 0.0 {
@@ -108,7 +121,7 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     }
 
     let nx = obj.x + obj.added_velocity.x * dt; // new x
-    let ny = obj.y + obj.velocity.y * dt; // new y
+    let ny = obj.y + (obj.added_velocity.y + obj.velocity.y) * dt; // new y
 
     let ox = nx + obj.hitbox.x as f32; // for colliding purposes
     let oy = ny + obj.hitbox.y as f32;
@@ -116,6 +129,8 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     let oh = obj.hitbox.h;
 
     obj.is_grounded = false;
+    obj.is_sliding = false;
+    obj.is_falling = true;
     let mut is_colliding_x = false;
     let mut is_colliding_y = false;
 
@@ -127,6 +142,9 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
         {
             is_colliding_x = true;
             obj.velocity.x = 0.0;
+            if !obj.is_grounded{
+                obj.is_sliding = true;
+            }
         }
         if (obj.x as i32 + ow as i32) > (col.x as i32)
             && (col.x as i32 + col.w as i32) > (obj.x as i32)
@@ -135,6 +153,7 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
         {
             is_colliding_y = true;
             obj.velocity.y = 0.0;
+            obj.is_falling = false;
             if oy as i32 >= obj.y as i32 {
                 obj.is_grounded = true;
             }
