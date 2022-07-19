@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-up" width="40" height="45" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="32">
+<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-up" width="40" height="45" tilewidth="8" tileheight="8" infinite="0" nextlayerid="7" nextobjectid="35">
  <tileset firstgid="1" source="startmenu.tsx"/>
  <layer id="1" name="Tile Layer 1" width="40" height="45">
   <data encoding="csv">
@@ -55,8 +55,26 @@
   <object id="30" name="Play" x="32" y="232" width="64" height="32"/>
   <object id="31" name="Easter Egg" x="48" y="16" width="64" height="40"/>
  </objectgroup>
+ <objectgroup id="6" name="TextHints">
+  <object id="32" name="PLAY" x="64" y="240" height="8">
+   <properties>
+    <property name="font" type="int" value="0"/>
+    <property name="text" value="play button"/>
+   </properties>
+  </object>
+  <object id="34" name="OPTIONS" x="256" y="240" height="8">
+   <properties>
+    <property name="font" type="int" value="0"/>
+    <property name="text" value="options button"/>
+   </properties>
+  </object>
+ </objectgroup>
  <objectgroup id="2" name="PlayerSpawners">
-  <object id="2" name="PlayerSpawn" gid="1073741825" x="160" y="328" width="8" height="16"/>
+  <object id="2" name="PlayerSpawn" gid="1073741825" x="160" y="328" width="8" height="16">
+   <properties>
+    <property name="SpawnPlace" type="int" value="0"/>
+   </properties>
+  </object>
  </objectgroup>
  <objectgroup id="4" name="Colliders">
   <object id="14" x="32" y="264" width="64" height="8"/>

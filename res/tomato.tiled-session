@@ -9,11 +9,11 @@
     ],
     "fileStates": {
         "startmenu.tmx": {
-            "scale": 4,
-            "selectedLayer": 1,
+            "scale": 3,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 109.5,
-                "y": 247.25
+                "x": 64,
+                "y": 240
             }
         },
         "startmenu.tsx": {
@@ -30,6 +30,7 @@
         "startmenu.tsx"
     ],
     "project": "tomato.tiled-project",
+    "property.type": "int",
     "recentFiles": [
         "startmenu.tsx",
         "startmenu.tmx"

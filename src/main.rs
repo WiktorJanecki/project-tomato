@@ -99,19 +99,15 @@ pub fn main() -> Result<(), String> {
         key_released_state: HashMap::new(),
         key_state: HashMap::new(),
     };
-
-    let pool = threadpool::ThreadPool::new(num_cpus::get());
-    let (send_player_physics, recv_player_physics) = std::sync::mpsc::channel();
+    let mut player_state = PlayerState::new(0.0, 0.0);
+    let mut physics_state = PhysicsState::default();
 
     let mut loader = tiled::Loader::new();
-    let mut start_map = loader.load_tmx_map("res/startmenu.tmx").unwrap();
-    load_tilemap_to_textures(&mut rendering_state, &mut start_map);
+    let mut start_map = switch_map(&mut loader, "res/startmenu.tmx",0, &mut rendering_state,&mut player_state,&mut physics_state);
 
-    let (x, y) = get_player_spawn_position(&start_map);
-    let mut player_state = PlayerState::new(x, y);
-    let mut physics_state = PhysicsState::default();
-    load_tilemap_to_physics(&mut physics_state, &start_map);
-
+    
+    let pool = threadpool::ThreadPool::new(num_cpus::get());
+    let (send_player_physics, recv_player_physics) = std::sync::mpsc::channel();
     let i18n_config: I18nConfig =  I18nConfig{locales: &["en","pl"], directory: "res/translations/"};
     let mut lang: I18n = I18n::configure(&i18n_config);
     lang.set_current_lang("en");
@@ -146,22 +142,40 @@ pub fn main() -> Result<(), String> {
         (physics_state, player_state) = recv_player_physics.recv().unwrap();
 
         let _frame_end_time = frame_timer.elapsed();
-        //println!("{}", 1.0/_frame_end_time.as_secs_f64());
+        // println!("{}", 1.0/_frame_end_time.as_secs_f64());
         std::thread::sleep(std::time::Duration::from_millis(16)); // ONLY FOR DEV PURPOSES
     }
 
     Ok(())
 }
 
-fn get_player_spawn_position(tile: &TilemapState) -> (f32, f32) {
+fn switch_map(loader: &mut tiled::Loader, path: &str,spawn_number: u32, render: &mut RenderingState, player: &mut PlayerState, physics: &mut PhysicsState) -> tiled::Map{
+    let map = loader.load_tmx_map(path).unwrap();
+    load_tilemap_to_textures(render, &map);
+    load_tilemap_to_text_hints(render, &map);
+    load_tilemap_to_physics(physics, &map);
+    load_player_spawn(player, &map, spawn_number);
+    return map
+}
+
+fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u32) {
     for layer in tile.layers() {
         if layer.name == "PlayerSpawners" {
             match layer.layer_type() {
                 tiled::LayerType::TileLayer(_) => {}
                 tiled::LayerType::ObjectLayer(obj) => {
                     for o in obj.objects() {
-                        if o.name == "PlayerSpawn" {
-                            return (o.x, o.y - 16.0); // obj origin is bottom left in tiled whereas top left in sdl
+                        if let Some(spawn_place_enum) = o.properties.get("SpawnPlace"){
+                            match spawn_place_enum {
+                                tiled::PropertyValue::IntValue(x) => {
+                                    if *x == spawn as i32 {
+                                        player.x = o.x;
+                                        player.y = o.y - player.height as f32; // obj origin is bottom left in tiled whereas top left in sdl
+                                        return;
+                                    }
+                                },
+                                _ => {},
+                            }
                         }
                     }
                 }

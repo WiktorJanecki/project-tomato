@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use fontdue::Font;
 use fontdue::layout::Layout;
+use fontdue::layout::LayoutSettings;
 use fontdue::layout::TextStyle;
 use fontdue_sdl2::FontTexture;
 use r_i18n::I18n;
@@ -12,20 +13,21 @@ use sdl2::render::Texture;
 use sdl2::render::TextureCreator;
 use sdl2::video::Window;
 use sdl2::video::WindowContext;
+use tiled::ObjectShape;
+use tiled::Properties;
+use tiled::PropertyValue;
 
 use crate::PhysicsState;
 use crate::PlayerState;
 
-#[derive(PartialEq, Eq, Hash)]
-pub enum Fonts{
-    Pixelated,
-}
-impl Into<usize> for Fonts {
-    fn into(self) -> usize {
-        self as usize
-    }
-}
 pub type TilemapState = tiled::Map;
+pub struct TextHint{
+    x: f32, /// x value of center of text hint
+    y: f32, /// y value of bottom of text hint
+    height: f32,
+    font: u32,
+    text: String,
+}
 pub struct RenderingState {
     pub canvas: Canvas<Window>,
     pub camera: sdl2::rect::Rect,
@@ -33,6 +35,8 @@ pub struct RenderingState {
     pub textures: HashMap<String, Texture>,
     pub font_texture: FontTexture,
     pub fonts: Vec<Font>,
+
+    pub text_hints: Vec<TextHint>,
 }
 
 impl RenderingState {
@@ -49,6 +53,8 @@ impl RenderingState {
             textures: HashMap::new(),
             font_texture: font_texture,
             fonts: fonts,
+
+            text_hints: vec![],
         }
     }
 }
@@ -63,6 +69,27 @@ pub fn load_tilemap_to_textures(state: &mut RenderingState, tile_state: &Tilemap
     }
     state.camera.set_width(tile_state.width * tile_state.tile_width);
     state.camera.set_height(tile_state.height * tile_state.tile_height);
+}
+
+pub fn load_tilemap_to_text_hints(state: &mut RenderingState, tile: &TilemapState){
+    let mut hints = vec![];
+    for layer in tile.layers(){
+        if layer.name == "TextHints"{
+            match layer.layer_type(){
+                tiled::LayerType::ObjectLayer(objl) => {
+                    for obj in objl.objects(){
+                        let font = if let PropertyValue::IntValue(font) = obj.properties.get("font").unwrap() {font} else {panic!()};
+                        let text = if let PropertyValue::StringValue(text) = obj.properties.get("text").unwrap() {text} else {panic!()};
+                        let height = if let ObjectShape::Rect { height, .. } = obj.shape {height} else {panic!()};
+
+                        hints.push(TextHint{ x: obj.x, y: obj.y, height: height, font: *font as u32, text: text.clone() });
+                    }
+                },       
+                _ => {},
+            }
+        }
+    }
+    state.text_hints.append(&mut hints);
 }
 
 fn render_tilemap(state: &mut RenderingState, tile_state: &TilemapState) {
@@ -117,6 +144,21 @@ fn render_tilemap(state: &mut RenderingState, tile_state: &TilemapState) {
     }
 }
 
+pub fn render_text_hints(state: &mut RenderingState, lang: &mut I18n){
+    for hint in state.text_hints.iter(){
+        let mut layout = Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
+        let mut width = 0.0;
+        let text = lang.t(hint.text.as_str()).as_str().unwrap();
+        let font = hint.font;
+        for chr in text.to_owned().chars(){
+             width += state.fonts.get(font as usize).unwrap().metrics(chr, hint.height).advance_width;
+        }
+        layout.reset(&LayoutSettings { x: state.camera.x as f32 + hint.x - width / 2.0, y: state.camera.y as f32 + hint.y, ..Default::default()});
+        layout.append(state.fonts.as_slice(), &TextStyle::with_user_data(text, hint.height, font as usize, Color::WHITE));
+        state.font_texture.draw_text(&mut state.canvas, &state.fonts, layout.glyphs()).unwrap();
+    }
+}
+
 pub fn render(
     state: &mut RenderingState,
     lang: &mut I18n,
@@ -150,6 +192,7 @@ pub fn render(
 
 
     render_tilemap(state, tile_state);
+    render_text_hints(state, lang);
 
     // render player
     let dst = sdl2::rect::Rect::new(
@@ -165,9 +208,8 @@ pub fn render(
 
     
     let mut layout = Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
-    layout.append(state.fonts.as_slice(), &TextStyle::with_user_data(lang.t("play button").as_str().unwrap(), 32.0,Fonts::Pixelated.into(),Color::RGB(128,255,128)));
+    layout.append(state.fonts.as_slice(), &TextStyle::with_user_data(lang.t("play button").as_str().unwrap(), 32.0,0,Color::RGB(128,255,128)));
     state.font_texture.draw_text_at(&mut state.canvas,state.fonts.as_slice(), layout.glyphs(),state.camera.x,state.camera.y).unwrap();
-
     state.canvas.present();
 }
 
