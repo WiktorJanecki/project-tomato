@@ -102,16 +102,14 @@ pub fn main() -> Result<(), String> {
     let mut player_state = PlayerState::new(0.0, 0.0);
     let mut physics_state = PhysicsState::default();
 
-    let mut loader = tiled::Loader::new();
-    let mut start_map = switch_map(&mut loader, "res/startmenu.tmx",0, &mut rendering_state,&mut player_state,&mut physics_state);
-
-    
     let pool = threadpool::ThreadPool::new(num_cpus::get());
     let (send_player_physics, recv_player_physics) = std::sync::mpsc::channel();
     let i18n_config: I18nConfig =  I18nConfig{locales: &["en","pl"], directory: "res/translations/"};
     let mut lang: I18n = I18n::configure(&i18n_config);
     lang.set_current_lang("en");
-
+    
+    let mut loader = tiled::Loader::new();
+    let mut start_map = switch_map(&mut loader, "res/startmenu.tmx",0, &lang, &mut rendering_state,&mut player_state,&mut physics_state);
     loop {
         let frame_timer = std::time::Instant::now();
         let render_player_state = player_state.clone();
@@ -142,17 +140,17 @@ pub fn main() -> Result<(), String> {
         (physics_state, player_state) = recv_player_physics.recv().unwrap();
 
         let _frame_end_time = frame_timer.elapsed();
-        // println!("{}", 1.0/_frame_end_time.as_secs_f64());
+        //println!("{}", 1.0/_frame_end_time.as_secs_f64());
         std::thread::sleep(std::time::Duration::from_millis(16)); // ONLY FOR DEV PURPOSES
     }
 
     Ok(())
 }
 
-fn switch_map(loader: &mut tiled::Loader, path: &str,spawn_number: u32, render: &mut RenderingState, player: &mut PlayerState, physics: &mut PhysicsState) -> tiled::Map{
+fn switch_map(loader: &mut tiled::Loader, path: &str,spawn_number: u32, lang: &I18n, render: &mut RenderingState, player: &mut PlayerState, physics: &mut PhysicsState) -> tiled::Map{
     let map = loader.load_tmx_map(path).unwrap();
     load_tilemap_to_textures(render, &map);
-    load_tilemap_to_text_hints(render, &map);
+    load_tilemap_to_text_hints(render, &map, &lang);
     load_tilemap_to_physics(physics, &map);
     load_player_spawn(player, &map, spawn_number);
     return map
