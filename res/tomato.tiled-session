@@ -9,11 +9,11 @@
     ],
     "fileStates": {
         "startmenu.tmx": {
-            "scale": 3,
-            "selectedLayer": 0,
+            "scale": 4,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 164,
-                "y": 148
+                "x": 109.5,
+                "y": 247.25
             }
         },
         "startmenu.tsx": {

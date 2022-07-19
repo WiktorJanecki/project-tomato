@@ -1,5 +1,10 @@
 use std::collections::HashMap;
 
+use fontdue::Font;
+use fontdue::layout::Layout;
+use fontdue::layout::TextStyle;
+use fontdue_sdl2::FontTexture;
+use r_i18n::I18n;
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
 use sdl2::render::Canvas;
@@ -11,22 +16,39 @@ use sdl2::video::WindowContext;
 use crate::PhysicsState;
 use crate::PlayerState;
 
+#[derive(PartialEq, Eq, Hash)]
+pub enum Fonts{
+    Pixelated,
+}
+impl Into<usize> for Fonts {
+    fn into(self) -> usize {
+        self as usize
+    }
+}
 pub type TilemapState = tiled::Map;
 pub struct RenderingState {
-    canvas: Canvas<Window>,
-    camera: sdl2::rect::Rect,
-    texture_creator: TextureCreator<WindowContext>,
-    textures: HashMap<String, Texture>,
+    pub canvas: Canvas<Window>,
+    pub camera: sdl2::rect::Rect,
+    pub texture_creator: TextureCreator<WindowContext>,
+    pub textures: HashMap<String, Texture>,
+    pub font_texture: FontTexture,
+    pub fonts: Vec<Font>,
 }
 
 impl RenderingState {
     pub fn new(canvas: Canvas<Window>) -> RenderingState {
         let texture_creator = canvas.texture_creator();
+        let font_texture = FontTexture::new(&texture_creator).unwrap();
+        let font = include_bytes!("../res/kongtext.ttf") as &[u8];
+        let kongtext = Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
+        let fonts = vec![kongtext];
         RenderingState {
             canvas,
-            texture_creator,
-            camera: sdl2::rect::Rect::new(0,0,0,0),  // camera width = map width etc
+            camera: sdl2::rect::Rect::new(0,0,0,0),
+            texture_creator,  // camera width = map width etc
             textures: HashMap::new(),
+            font_texture: font_texture,
+            fonts: fonts,
         }
     }
 }
@@ -97,6 +119,7 @@ fn render_tilemap(state: &mut RenderingState, tile_state: &TilemapState) {
 
 pub fn render(
     state: &mut RenderingState,
+    lang: &mut I18n,
     tile_state: &TilemapState,
     player: &PlayerState,
     _physics: &PhysicsState,
@@ -139,6 +162,11 @@ pub fn render(
     state.canvas.fill_rect(dst).unwrap();
 
     //_render_colliders(state,player,_physics);
+
+    
+    let mut layout = Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
+    layout.append(state.fonts.as_slice(), &TextStyle::with_user_data(lang.t("play button").as_str().unwrap(), 32.0,Fonts::Pixelated.into(),Color::RGB(128,255,128)));
+    state.font_texture.draw_text_at(&mut state.canvas,state.fonts.as_slice(), layout.glyphs(),state.camera.x,state.camera.y).unwrap();
 
     state.canvas.present();
 }

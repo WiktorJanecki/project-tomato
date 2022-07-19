@@ -1,11 +1,13 @@
 extern crate sdl2;
 
 use std::collections::HashMap;
-
 use glam::Vec2;
+use r_i18n::I18n;
+use r_i18n::I18nConfig;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
+
 
 mod render;
 use crate::render::*;
@@ -110,6 +112,10 @@ pub fn main() -> Result<(), String> {
     let mut physics_state = PhysicsState::default();
     load_tilemap_to_physics(&mut physics_state, &start_map);
 
+    let i18n_config: I18nConfig =  I18nConfig{locales: &["en","pl"], directory: "res/translations/"};
+    let mut lang: I18n = I18n::configure(&i18n_config);
+    lang.set_current_lang("en");
+
     loop {
         let frame_timer = std::time::Instant::now();
         let render_player_state = player_state.clone();
@@ -130,6 +136,7 @@ pub fn main() -> Result<(), String> {
 
         render(
             &mut rendering_state,
+            &mut lang,
             &mut start_map,
             &render_player_state,
             &render_physics_state,
