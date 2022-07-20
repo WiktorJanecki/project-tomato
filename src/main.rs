@@ -1,13 +1,12 @@
 extern crate sdl2;
 
-use std::collections::HashMap;
 use glam::Vec2;
 use r_i18n::I18n;
 use r_i18n::I18nConfig;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
-
+use std::collections::HashMap;
 
 mod render;
 use crate::render::*;
@@ -42,6 +41,8 @@ pub struct PlayerState {
     is_sliding: bool,
     coyote_time_counter: f32,
     jump_buffer_counter: f32,
+    wants_to_interact: bool,
+    can_interact: bool,
 }
 
 impl PlayerState {
@@ -70,6 +71,8 @@ impl PlayerState {
             is_sliding: false,
             coyote_time_counter: 0.0,
             jump_buffer_counter: 0.0,
+            wants_to_interact: false,
+            can_interact: false,
         }
     }
 }
@@ -104,12 +107,23 @@ pub fn main() -> Result<(), String> {
 
     let pool = threadpool::ThreadPool::new(num_cpus::get());
     let (send_player_physics, recv_player_physics) = std::sync::mpsc::channel();
-    let i18n_config: I18nConfig =  I18nConfig{locales: &["en","pl"], directory: "res/translations/"};
+    let i18n_config: I18nConfig = I18nConfig {
+        locales: &["en", "pl"],
+        directory: "res/translations/",
+    };
     let mut lang: I18n = I18n::configure(&i18n_config);
     lang.set_current_lang("en");
-    
+
     let mut loader = tiled::Loader::new();
-    let mut start_map = switch_map(&mut loader, "res/startmenu.tmx",0, &lang, &mut rendering_state,&mut player_state,&mut physics_state);
+    let mut start_map = switch_map(
+        &mut loader,
+        "res/startmenu.tmx",
+        0,
+        &lang,
+        &mut rendering_state,
+        &mut player_state,
+        &mut physics_state,
+    );
     loop {
         let frame_timer = std::time::Instant::now();
         let render_player_state = player_state.clone();
@@ -139,6 +153,18 @@ pub fn main() -> Result<(), String> {
         pool.join();
         (physics_state, player_state) = recv_player_physics.recv().unwrap();
 
+        let interaction_result = player_interact(
+            &mut loader,
+            &lang,
+            &mut rendering_state,
+            &mut player_state,
+            &mut physics_state,
+        );
+        match interaction_result {
+            InteractionResult::Nothing => {}
+            InteractionResult::ChangeMap(new_map) => start_map = new_map,
+        }
+
         let _frame_end_time = frame_timer.elapsed();
         //println!("{}", 1.0/_frame_end_time.as_secs_f64());
         std::thread::sleep(std::time::Duration::from_millis(16)); // ONLY FOR DEV PURPOSES
@@ -147,13 +173,27 @@ pub fn main() -> Result<(), String> {
     Ok(())
 }
 
-fn switch_map(loader: &mut tiled::Loader, path: &str,spawn_number: u32, lang: &I18n, render: &mut RenderingState, player: &mut PlayerState, physics: &mut PhysicsState) -> tiled::Map{
+fn switch_map(
+    loader: &mut tiled::Loader,
+    path: &str,
+    spawn_number: u32,
+    lang: &I18n,
+    render: &mut RenderingState,
+    player: &mut PlayerState,
+    physics: &mut PhysicsState,
+) -> tiled::Map {
     let map = loader.load_tmx_map(path).unwrap();
+
+    render.text_hints.clear();
+    physics.colliders.clear();
+    physics.interactables.clear();
+
     load_tilemap_to_textures(render, &map);
     load_tilemap_to_text_hints(render, &map, &lang);
     load_tilemap_to_physics(physics, &map);
+    load_tilemap_to_interactables(physics, &map);
     load_player_spawn(player, &map, spawn_number);
-    return map
+    return map;
 }
 
 fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u32) {
@@ -163,7 +203,7 @@ fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u32) 
                 tiled::LayerType::TileLayer(_) => {}
                 tiled::LayerType::ObjectLayer(obj) => {
                     for o in obj.objects() {
-                        if let Some(spawn_place_enum) = o.properties.get("SpawnPlace"){
+                        if let Some(spawn_place_enum) = o.properties.get("spawn place") {
                             match spawn_place_enum {
                                 tiled::PropertyValue::IntValue(x) => {
                                     if *x == spawn as i32 {
@@ -171,8 +211,8 @@ fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u32) 
                                         player.y = o.y - player.height as f32; // obj origin is bottom left in tiled whereas top left in sdl
                                         return;
                                     }
-                                },
-                                _ => {},
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -203,6 +243,41 @@ fn move_player(player: &mut PlayerState, input: &InputState) {
     if !wanna_move {
         player.wants_dir = 0.0;
     }
+    player.wants_to_interact = get_key(sdl2::keyboard::Keycode::Up, input);
+}
+
+enum InteractionResult {
+    Nothing,
+    ChangeMap(TilemapState),
+}
+
+fn player_interact(
+    loader: &mut tiled::Loader,
+    lang: &I18n,
+    render: &mut RenderingState,
+    player: &mut PlayerState,
+    physics: &mut PhysicsState,
+) -> InteractionResult {
+    if player.can_interact && player.wants_to_interact {
+        let mut interactable = None;
+        for int in physics.interactables.iter() {
+            if int.is_in_collider {
+                interactable = Some(int.clone());
+                break;
+            }
+        }
+        if interactable.is_none() {
+            return InteractionResult::Nothing;
+        }
+        match interactable.unwrap().interaction {
+            Interactions::ChangeMap(path, numb) => {
+                return InteractionResult::ChangeMap(switch_map(
+                    loader, &path, numb, lang, render, player, physics,
+                ));
+            }
+        }
+    }
+    return InteractionResult::Nothing;
 }
 
 fn input(state: &mut InputState) {

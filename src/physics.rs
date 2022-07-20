@@ -1,3 +1,5 @@
+use tiled::{Properties, PropertyValue};
+
 use crate::{render::TilemapState, PlayerState};
 
 #[derive(Default, Clone)]
@@ -9,10 +11,24 @@ pub struct Collider {
 }
 
 #[derive(Clone)]
+pub enum Interactions {
+    /// Map path and spawn number
+    ChangeMap(String, u32),
+}
+
+#[derive(Clone)]
+pub struct Interactable {
+    pub collider: Collider,
+    pub interaction: Interactions,
+    pub is_in_collider: bool,
+}
+
+#[derive(Clone)]
 pub struct PhysicsState {
     pub dt: f32,
     pub dt_timer: std::time::Instant,
     pub colliders: Vec<Collider>,
+    pub interactables: Vec<Interactable>,
 }
 
 impl Default for PhysicsState {
@@ -21,8 +37,62 @@ impl Default for PhysicsState {
             dt: 0.0,
             dt_timer: std::time::Instant::now(),
             colliders: vec![],
+            interactables: vec![],
         }
     }
+}
+
+pub fn load_tilemap_to_interactables(state: &mut PhysicsState, tile_state: &TilemapState) {
+    let mut interactables: Vec<Interactable> = vec![];
+    for layer in tile_state.layers() {
+        if layer.name == "Interactables" {
+            match layer.layer_type() {
+                tiled::LayerType::ObjectLayer(obj_layer) => {
+                    for obj in obj_layer.objects() {
+                        match obj.shape {
+                            tiled::ObjectShape::Rect { width, height } => {
+                                let x = obj.x as i32;
+                                let y = obj.y as i32;
+                                let w = width as u32;
+                                let h = height as u32;
+                                let col = Collider { x, y, w, h };
+
+                                if let Some(map_change) = obj.properties.get("map change") {
+                                    let map_path =
+                                        if let PropertyValue::StringValue(path) = map_change {
+                                            path
+                                        } else {
+                                            panic!()
+                                        };
+                                    let spawn_place = if let PropertyValue::IntValue(spawn_place) =
+                                        obj.properties.get("spawn place").unwrap()
+                                    {
+                                        spawn_place
+                                    } else {
+                                        panic!()
+                                    };
+
+                                    let interaction = Interactions::ChangeMap(
+                                        map_path.clone(),
+                                        *spawn_place as u32,
+                                    );
+                                    interactables.push(Interactable {
+                                        collider: col,
+                                        interaction: interaction,
+                                        is_in_collider: false,
+                                    })
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    state.interactables.append(&mut interactables);
 }
 
 pub fn load_tilemap_to_physics(state: &mut PhysicsState, tile_state: &TilemapState) {
@@ -50,6 +120,32 @@ pub fn load_tilemap_to_physics(state: &mut PhysicsState, tile_state: &TilemapSta
         }
     }
     state.colliders.append(&mut colliders);
+}
+
+pub fn player_collision_interactables(physics: &mut PhysicsState, player: &mut PlayerState) {
+    player.can_interact = false;
+    for interactable in physics.interactables.iter_mut() {
+        let col = &interactable.collider;
+        if is_colliding(
+            player.x as i32,
+            player.y as i32,
+            player.width as i32,
+            player.height as i32,
+            col.x,
+            col.y,
+            col.w as i32,
+            col.h as i32,
+        ) {
+            interactable.is_in_collider = true;
+            player.can_interact = true;
+        } else {
+            interactable.is_in_collider = false;
+        }
+    }
+}
+
+fn is_colliding(x1: i32, y1: i32, w1: i32, h1: i32, x2: i32, y2: i32, w2: i32, h2: i32) -> bool {
+    return x1 < x2 + w2 && x1 + w1 > x2 && y1 + h1 > y2 && y1 < y2 + h2;
 }
 
 pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
@@ -85,7 +181,7 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
         obj.coyote_time_counter -= dt;
     }
 
-    if obj.wants_to_jump{
+    if obj.wants_to_jump {
         obj.jump_buffer_counter = jump_buffer_time;
     } else {
         obj.jump_buffer_counter -= dt;
@@ -99,15 +195,14 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
         obj.jump_buffer_counter = 0.0;
     }
     // wall jumping
-    if obj.jump_buffer_counter > 0.0 && obj.is_sliding{
+    if obj.jump_buffer_counter > 0.0 && obj.is_sliding {
         obj.added_velocity.x = -obj.wants_dir * wall_jump_force;
         obj.velocity.y = -jump_force;
         obj.wants_to_jump = false;
-
     }
 
-    if obj.is_sliding{
-        if obj.velocity.y > sliding_speed{
+    if obj.is_sliding {
+        if obj.velocity.y > sliding_speed {
             obj.velocity.y = sliding_speed;
         }
     }
@@ -145,7 +240,7 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
         {
             is_colliding_x = true;
             obj.velocity.x = 0.0;
-            if !obj.is_grounded{
+            if !obj.is_grounded {
                 obj.is_sliding = true;
             }
         }
@@ -169,4 +264,5 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     if !is_colliding_y {
         obj.y = ny;
     }
+    player_collision_interactables(state, obj);
 }

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use fontdue::Font;
 use fontdue::layout::Layout;
 use fontdue::layout::LayoutSettings;
 use fontdue::layout::TextStyle;
+use fontdue::Font;
 use fontdue_sdl2::FontTexture;
 use r_i18n::I18n;
 use sdl2::image::LoadTexture;
@@ -39,16 +39,25 @@ impl RenderingState {
         let font = include_bytes!("../res/kongtext.ttf") as &[u8];
         let kongtext = Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
         let fonts = vec![kongtext];
-        RenderingState {
+
+        let mut x = RenderingState {
             canvas,
-            camera: sdl2::rect::Rect::new(0,0,0,0),
-            texture_creator,  // camera width = map width etc
+            camera: sdl2::rect::Rect::new(0, 0, 0, 0),
+            texture_creator, // camera width = map width etc
             textures: HashMap::new(),
             font_texture: font_texture,
             fonts: fonts,
 
             text_hints: vec![],
-        }
+        };
+
+        let up_arrow_texture = x
+            .texture_creator
+            .load_texture("res/arrowglyph.png")
+            .unwrap();
+        x.textures
+            .insert("res/arrowglyph.png".to_owned(), up_arrow_texture);
+        x
     }
 }
 
@@ -60,31 +69,64 @@ pub fn load_tilemap_to_textures(state: &mut RenderingState, tile_state: &Tilemap
         let name = tileset.name.clone();
         state.textures.insert(name, txt);
     }
-    state.camera.set_width(tile_state.width * tile_state.tile_width);
-    state.camera.set_height(tile_state.height * tile_state.tile_height);
+    state
+        .camera
+        .set_width(tile_state.width * tile_state.tile_width);
+    state
+        .camera
+        .set_height(tile_state.height * tile_state.tile_height);
 }
 
-pub fn load_tilemap_to_text_hints(state: &mut RenderingState, tile: &TilemapState, lang: &I18n){
-    for layer in tile.layers(){
-        if layer.name == "TextHints"{
-            match layer.layer_type(){
+pub fn load_tilemap_to_text_hints(state: &mut RenderingState, tile: &TilemapState, lang: &I18n) {
+    for layer in tile.layers() {
+        if layer.name == "TextHints" {
+            match layer.layer_type() {
                 tiled::LayerType::ObjectLayer(objl) => {
-                    for obj in objl.objects(){
-                        let font = if let PropertyValue::IntValue(font) = obj.properties.get("font").unwrap() {font} else {panic!()};
-                        let text_untraslated = if let PropertyValue::StringValue(text) = obj.properties.get("text").unwrap() {text} else {panic!()};
+                    for obj in objl.objects() {
+                        let font = if let PropertyValue::IntValue(font) =
+                            obj.properties.get("font").unwrap()
+                        {
+                            font
+                        } else {
+                            panic!()
+                        };
+                        let text_untraslated = if let PropertyValue::StringValue(text) =
+                            obj.properties.get("text").unwrap()
+                        {
+                            text
+                        } else {
+                            panic!()
+                        };
                         let text = lang.t(&text_untraslated).as_str().unwrap();
-                        let height = if let ObjectShape::Rect { height, .. } = obj.shape {height} else {panic!()};
-                        let mut layout = Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
+                        let height = if let ObjectShape::Rect { height, .. } = obj.shape {
+                            height
+                        } else {
+                            panic!()
+                        };
+                        let mut layout =
+                            Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
                         let mut width = 0.0;
-                        for chr in text.to_owned().chars(){
-                             width += state.fonts.get(*font as usize).unwrap().metrics(chr, height).advance_width;
+                        for chr in text.to_owned().chars() {
+                            width += state
+                                .fonts
+                                .get(*font as usize)
+                                .unwrap()
+                                .metrics(chr, height)
+                                .advance_width;
                         }
-                        layout.reset(&LayoutSettings { x: obj.x - width / 2.0, y:  obj.y, ..Default::default()});
-                        layout.append(state.fonts.as_slice(), &TextStyle::with_user_data(text, height, *font as usize, Color::WHITE));
+                        layout.reset(&LayoutSettings {
+                            x: obj.x - width / 2.0,
+                            y: obj.y,
+                            ..Default::default()
+                        });
+                        layout.append(
+                            state.fonts.as_slice(),
+                            &TextStyle::with_user_data(text, height, *font as usize, Color::WHITE),
+                        );
                         state.text_hints.push(layout);
                     }
-                },       
-                _ => {},
+                }
+                _ => {}
             }
         }
     }
@@ -142,9 +184,18 @@ fn render_tilemap(state: &mut RenderingState, tile_state: &TilemapState) {
     }
 }
 
-pub fn render_text_hints(state: &mut RenderingState){
-    for layout in state.text_hints.iter(){
-        state.font_texture.draw_text_at(&mut state.canvas, &state.fonts, layout.glyphs(), state.camera.x, state.camera.y).unwrap();
+pub fn render_text_hints(state: &mut RenderingState) {
+    for layout in state.text_hints.iter() {
+        state
+            .font_texture
+            .draw_text_at(
+                &mut state.canvas,
+                &state.fonts,
+                layout.glyphs(),
+                state.camera.x,
+                state.camera.y,
+            )
+            .unwrap();
     }
 }
 
@@ -161,24 +212,30 @@ pub fn render(
 
     // center camera to player,
     // camera x and y are inverted (*-1) therefore every calculation must be inverted too
-    state.camera.set_x(-(player.x as i32 + player.width as i32/2) + canvas_w as i32 /2);
-    state.camera.set_y(-(player.y as i32 + player.height as i32/2) + canvas_h as i32/2);
-
+    state
+        .camera
+        .set_x(-(player.x as i32 + player.width as i32 / 2) + canvas_w as i32 / 2);
+    state
+        .camera
+        .set_y(-(player.y as i32 + player.height as i32 / 2) + canvas_h as i32 / 2);
 
     //set camera bounds
-    if state.camera.x > 0{
+    if state.camera.x > 0 {
         state.camera.set_x(0);
     }
-    if state.camera.y > 0{
+    if state.camera.y > 0 {
         state.camera.set_y(0);
     }
-    if (-state.camera.x + canvas_w as i32) > state.camera.width() as i32{
-        state.camera.set_x(state.camera.width() as i32 * -1  +canvas_w as i32);
+    if (-state.camera.x + canvas_w as i32) > state.camera.width() as i32 {
+        state
+            .camera
+            .set_x(state.camera.width() as i32 * -1 + canvas_w as i32);
     }
-    if (-state.camera.y + canvas_h as i32) > state.camera.height() as i32{
-        state.camera.set_y(state.camera.height() as i32 * -1 + canvas_h as i32);
+    if (-state.camera.y + canvas_h as i32) > state.camera.height() as i32 {
+        state
+            .camera
+            .set_y(state.camera.height() as i32 * -1 + canvas_h as i32);
     }
-
 
     render_tilemap(state, tile_state);
     render_text_hints(state);
@@ -193,12 +250,40 @@ pub fn render(
     state.canvas.set_draw_color(Color::RGB(255, 255, 0));
     state.canvas.fill_rect(dst).unwrap();
 
+    if player.can_interact {
+        let dst = sdl2::rect::Rect::new(
+            player.x as i32 + state.camera.x + (0.5 * player.width as f32) as i32 - 4,
+            player.y as i32 + state.camera.y - 16,
+            8,
+            8,
+        );
+        let txt = state.textures.get_mut("res/arrowglyph.png").unwrap();
+        txt.set_color_mod(255, 255, 255);
+        state.canvas.copy(txt, None, dst).unwrap();
+    }
+
     //_render_colliders(state,player,_physics);
 
-    
     let mut layout = Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
-    layout.append(state.fonts.as_slice(), &TextStyle::with_user_data(_lang.t("play button").as_str().unwrap(), 32.0,0,Color::RGB(128,255,128)));
-    state.font_texture.draw_text_at(&mut state.canvas,state.fonts.as_slice(), layout.glyphs(),state.camera.x,state.camera.y).unwrap();
+    layout.append(
+        state.fonts.as_slice(),
+        &TextStyle::with_user_data(
+            _lang.t("play button").as_str().unwrap(),
+            32.0,
+            0,
+            Color::RGB(128, 255, 128),
+        ),
+    );
+    state
+        .font_texture
+        .draw_text_at(
+            &mut state.canvas,
+            state.fonts.as_slice(),
+            layout.glyphs(),
+            state.camera.x,
+            state.camera.y,
+        )
+        .unwrap();
     state.canvas.present();
 }
 

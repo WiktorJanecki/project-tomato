@@ -9,11 +9,14 @@
     ],
     "fileStates": {
         "startmenu.tmx": {
-            "scale": 3,
+            "expandedObjectLayers": [
+                5
+            ],
+            "scale": 5.5,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 64,
-                "y": 240
+                "x": 164,
+                "y": 336
             }
         },
         "startmenu.tsx": {
@@ -22,9 +25,11 @@
         }
     },
     "last.imagePath": "C:/projects/project-tomato/res",
+    "map.height": 40,
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 8,
     "map.tileWidth": 8,
+    "map.width": 50,
     "openFiles": [
         "startmenu.tmx",
         "startmenu.tsx"
