@@ -16,6 +16,7 @@ use sdl2::video::WindowContext;
 use tiled::ObjectShape;
 use tiled::PropertyValue;
 
+use crate::EnemiesState;
 use crate::PhysicsState;
 use crate::PlayerState;
 
@@ -30,6 +31,57 @@ pub struct RenderingState {
     pub fonts: Vec<Font>,
 
     pub text_hints: Vec<Layout<Color>>,
+}
+
+pub struct AnimationFrame{
+    pub x: i32,
+    pub y: i32,
+    pub w: u32,
+    pub h: u32,
+}
+
+pub struct Animation{
+    pub frames: Vec<AnimationFrame>,
+    pub time_per_frame: f32,
+    pub timer: f32,
+    pub current_frame: usize,
+}
+
+pub struct AnimationState{
+    pub dt: f32,
+    pub dt_timer: std::time::Instant,
+}
+
+impl AnimationState{
+    pub fn new() -> Self{
+        Self { dt: 0.0, dt_timer: std::time::Instant::now() }
+    }
+}
+
+impl Animation{
+    pub fn new(time_per_frame: f32) -> Self{
+        Self{
+            frames: vec![],
+            timer: 0.0,
+            time_per_frame,
+            current_frame: 0,
+        }
+    }
+}
+
+pub fn animate(animation: &mut AnimationState, _player: &mut PlayerState, enemies: &mut EnemiesState){
+    let now = std::time::Instant::now();
+    let dt = (now.duration_since(animation.dt_timer).as_secs_f64()) as f32;
+    animation.dt_timer = std::time::Instant::now();
+
+    for enemy in enemies.enemies.iter_mut(){
+        let anim = &mut enemy.animation;
+        anim.timer += dt;
+        if anim.timer > 0.0 {
+            anim.timer = -anim.time_per_frame;
+            anim.current_frame = (anim.current_frame + 1) %anim.frames.len();
+        }
+    }
 }
 
 impl RenderingState {
@@ -204,6 +256,7 @@ pub fn render(
     _lang: &mut I18n,
     tile_state: &TilemapState,
     player: &PlayerState,
+    enemies: &EnemiesState,
     _physics: &PhysicsState,
 ) {
     state.canvas.set_draw_color(Color::RGB(0, 0, 0));
@@ -239,6 +292,7 @@ pub fn render(
 
     render_tilemap(state, tile_state);
     render_text_hints(state);
+    render_enemies(state, enemies);
 
     // render player
     let dst = sdl2::rect::Rect::new(
@@ -263,28 +317,26 @@ pub fn render(
     }
 
     //_render_colliders(state,player,_physics);
-
-    let mut layout = Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown);
-    layout.append(
-        state.fonts.as_slice(),
-        &TextStyle::with_user_data(
-            _lang.t("play button").as_str().unwrap(),
-            32.0,
-            0,
-            Color::RGB(128, 255, 128),
-        ),
-    );
-    state
-        .font_texture
-        .draw_text_at(
-            &mut state.canvas,
-            state.fonts.as_slice(),
-            layout.glyphs(),
-            state.camera.x,
-            state.camera.y,
-        )
-        .unwrap();
     state.canvas.present();
+}
+
+pub fn render_enemies(state: &mut RenderingState, enemies: &EnemiesState){
+    for enemy in enemies.enemies.iter(){
+        let src = sdl2::rect::Rect::new(
+            enemy.animation.frames[enemy.animation.current_frame].x,
+            enemy.animation.frames[enemy.animation.current_frame].y,
+            enemy.animation.frames[enemy.animation.current_frame].w,
+            enemy.animation.frames[enemy.animation.current_frame].h,
+        );
+        let dst = sdl2::rect::Rect::new(
+            enemy.x as i32+ state.camera.x,
+            enemy.y as i32+ state.camera.y,
+            enemy.width,
+            enemy.height
+        );
+        let txt = state.textures.get(&enemy.texture_path).unwrap();
+        state.canvas.copy(txt, src, dst).unwrap();
+    }
 }
 
 pub fn _render_colliders(state: &mut RenderingState, player: &PlayerState, physics: &PhysicsState) {

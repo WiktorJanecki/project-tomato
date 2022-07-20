@@ -1,4 +1,4 @@
-use tiled::{Properties, PropertyValue};
+use tiled::{PropertyValue};
 
 use crate::{render::TilemapState, PlayerState};
 
@@ -263,6 +263,13 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     }
     if !is_colliding_y {
         obj.y = ny;
+    }
+
+    if obj.x < 0.0{
+        obj.x = 0.0;
+    }
+    if obj.y < 0.0{
+        obj.y = 0.0;
     }
     player_collision_interactables(state, obj);
 }

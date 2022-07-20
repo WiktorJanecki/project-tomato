@@ -12,6 +12,8 @@ mod render;
 use crate::render::*;
 mod physics;
 use crate::physics::*;
+mod enemy;
+use crate::enemy::*;
 
 struct InputState {
     event_pump: EventPump,
@@ -19,6 +21,14 @@ struct InputState {
     key_pressed_state: HashMap<Keycode, bool>,
     key_released_state: HashMap<Keycode, bool>,
     key_state: HashMap<Keycode, bool>,
+}
+
+pub struct EnemiesState{
+    enemies: Vec<Enemy>,
+}
+
+impl EnemiesState {
+    pub fn new() -> Self { Self { enemies:vec![] } }
 }
 
 #[derive(Clone)]
@@ -104,6 +114,8 @@ pub fn main() -> Result<(), String> {
     };
     let mut player_state = PlayerState::new(0.0, 0.0);
     let mut physics_state = PhysicsState::default();
+    let mut enemies_state = EnemiesState { enemies: vec![] };
+    let mut animation_state = AnimationState::new();
 
     let pool = threadpool::ThreadPool::new(num_cpus::get());
     let (send_player_physics, recv_player_physics) = std::sync::mpsc::channel();
@@ -122,6 +134,7 @@ pub fn main() -> Result<(), String> {
         &lang,
         &mut rendering_state,
         &mut player_state,
+        &mut enemies_state,
         &mut physics_state,
     );
     loop {
@@ -135,6 +148,7 @@ pub fn main() -> Result<(), String> {
         };
 
         move_player(&mut player_state, &input_state);
+        animate(&mut animation_state, &mut player_state, &mut enemies_state);
 
         let sender = send_player_physics.clone();
         pool.execute(move || {
@@ -147,6 +161,7 @@ pub fn main() -> Result<(), String> {
             &mut lang,
             &mut start_map,
             &render_player_state,
+            &enemies_state,
             &render_physics_state,
         );
 
@@ -158,6 +173,7 @@ pub fn main() -> Result<(), String> {
             &lang,
             &mut rendering_state,
             &mut player_state,
+            &mut enemies_state,
             &mut physics_state,
         );
         match interaction_result {
@@ -180,6 +196,7 @@ fn switch_map(
     lang: &I18n,
     render: &mut RenderingState,
     player: &mut PlayerState,
+    enemies: &mut EnemiesState,
     physics: &mut PhysicsState,
 ) -> tiled::Map {
     let map = loader.load_tmx_map(path).unwrap();
@@ -192,6 +209,7 @@ fn switch_map(
     load_tilemap_to_text_hints(render, &map, &lang);
     load_tilemap_to_physics(physics, &map);
     load_tilemap_to_interactables(physics, &map);
+    load_tilemap_to_enemies(enemies, &map, render);
     load_player_spawn(player, &map, spawn_number);
     return map;
 }
@@ -256,6 +274,7 @@ fn player_interact(
     lang: &I18n,
     render: &mut RenderingState,
     player: &mut PlayerState,
+    enemies: &mut EnemiesState,
     physics: &mut PhysicsState,
 ) -> InteractionResult {
     if player.can_interact && player.wants_to_interact {
@@ -272,7 +291,7 @@ fn player_interact(
         match interactable.unwrap().interaction {
             Interactions::ChangeMap(path, numb) => {
                 return InteractionResult::ChangeMap(switch_map(
-                    loader, &path, numb, lang, render, player, physics,
+                    loader, &path, numb, lang, render, player, enemies, physics,
                 ));
             }
         }

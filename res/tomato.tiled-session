@@ -3,25 +3,54 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "startmenu.tmx",
+    "activeFile": "testmap.tmx",
     "expandedProjectPaths": [
         "."
     ],
     "fileStates": {
+        "mariomap_extras.tsx": {
+            "scaleInDock": 3,
+            "scaleInEditor": 11
+        },
+        "mariomap_tiles.tsx": {
+            "scaleInDock": 5.5,
+            "scaleInEditor": 16
+        },
         "startmenu.tmx": {
             "expandedObjectLayers": [
+                2,
                 5
             ],
             "scale": 5.5,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 164,
-                "y": 336
+                "x": 160,
+                "y": 179.9090909090909
             }
         },
         "startmenu.tsx": {
             "scaleInDock": 8,
             "scaleInEditor": 11
+        },
+        "testmap.tmx": {
+            "scale": 2,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 226.5,
+                "y": 187
+            }
+        },
+        "textmap.tmx": {
+            "expandedObjectLayers": [
+                3,
+                2
+            ],
+            "scale": 8,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 57.25,
+                "y": 281.5
+            }
         }
     },
     "last.imagePath": "C:/projects/project-tomato/res",
@@ -32,13 +61,20 @@
     "map.width": 50,
     "openFiles": [
         "startmenu.tmx",
-        "startmenu.tsx"
+        "startmenu.tsx",
+        "testmap.tmx",
+        "mariomap_tiles.tsx",
+        "mariomap_extras.tsx"
     ],
     "project": "tomato.tiled-project",
-    "property.type": "int",
+    "property.type": "string",
     "recentFiles": [
+        "startmenu.tmx",
         "startmenu.tsx",
-        "startmenu.tmx"
+        "mariomap_extras.tsx",
+        "mariomap_tiles.tsx",
+        "testmap.tmx",
+        "textmap.tmx"
     ],
     "resizeMap.removeObjects": true,
     "tileset.lastUsedFormat": "tsx",
