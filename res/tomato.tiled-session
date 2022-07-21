@@ -18,8 +18,8 @@
         },
         "startmenu.tmx": {
             "expandedObjectLayers": [
-                2,
-                5
+                5,
+                2
             ],
             "scale": 5.5,
             "selectedLayer": 2,
@@ -33,11 +33,11 @@
             "scaleInEditor": 11
         },
         "testmap.tmx": {
-            "scale": 2,
-            "selectedLayer": 2,
+            "scale": 3,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 226.5,
-                "y": 187
+                "x": 143.33333333333331,
+                "y": 234.66666666666666
             }
         },
         "textmap.tmx": {

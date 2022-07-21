@@ -1,6 +1,5 @@
 extern crate sdl2;
 
-use glam::Vec2;
 use r_i18n::I18n;
 use r_i18n::I18nConfig;
 use sdl2::event::Event;
@@ -14,6 +13,8 @@ mod physics;
 use crate::physics::*;
 mod enemy;
 use crate::enemy::*;
+mod player;
+use crate::player::*;
 
 struct InputState {
     event_pump: EventPump,
@@ -21,70 +22,6 @@ struct InputState {
     key_pressed_state: HashMap<Keycode, bool>,
     key_released_state: HashMap<Keycode, bool>,
     key_state: HashMap<Keycode, bool>,
-}
-
-pub struct EnemiesState{
-    enemies: Vec<Enemy>,
-}
-
-impl EnemiesState {
-    pub fn new() -> Self { Self { enemies:vec![] } }
-}
-
-#[derive(Clone)]
-pub struct PlayerState {
-    _player_sprite_path: &'static str,
-    _anim_x: u32,
-    _anim_y: u32,
-    x: f32,
-    y: f32,
-    width: u32,
-    height: u32,
-    hitbox: Collider,
-    wants_dir: f32,
-    added_velocity: Vec2,
-    velocity: Vec2,
-    acceleration: Vec2,
-    wants_to_jump: bool,
-    is_grounded: bool,
-    is_falling: bool,
-    is_sliding: bool,
-    coyote_time_counter: f32,
-    jump_buffer_counter: f32,
-    wants_to_interact: bool,
-    can_interact: bool,
-}
-
-impl PlayerState {
-    fn new(x: f32, y: f32) -> Self {
-        Self {
-            _player_sprite_path: "res/player.png",
-            width: 8,
-            height: 16,
-            _anim_x: 0,
-            _anim_y: 0,
-            x: x,
-            y: y,
-            hitbox: Collider {
-                x: 0,
-                y: 0,
-                w: 8,
-                h: 16,
-            },
-            wants_dir: 0.0,
-            added_velocity: Vec2::ZERO,
-            velocity: Vec2::ZERO,
-            acceleration: Vec2::ZERO,
-            wants_to_jump: false,
-            is_grounded: false,
-            is_falling: false,
-            is_sliding: false,
-            coyote_time_counter: 0.0,
-            jump_buffer_counter: 0.0,
-            wants_to_interact: false,
-            can_interact: false,
-        }
-    }
 }
 
 pub fn main() -> Result<(), String> {
@@ -137,6 +74,9 @@ pub fn main() -> Result<(), String> {
         &mut enemies_state,
         &mut physics_state,
     );
+
+    // -------------------- GAME LOOP -------------------- //
+
     loop {
         let frame_timer = std::time::Instant::now();
         let render_player_state = player_state.clone();
@@ -214,34 +154,6 @@ fn switch_map(
     return map;
 }
 
-fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u32) {
-    for layer in tile.layers() {
-        if layer.name == "PlayerSpawners" {
-            match layer.layer_type() {
-                tiled::LayerType::TileLayer(_) => {}
-                tiled::LayerType::ObjectLayer(obj) => {
-                    for o in obj.objects() {
-                        if let Some(spawn_place_enum) = o.properties.get("spawn place") {
-                            match spawn_place_enum {
-                                tiled::PropertyValue::IntValue(x) => {
-                                    if *x == spawn as i32 {
-                                        player.x = o.x;
-                                        player.y = o.y - player.height as f32; // obj origin is bottom left in tiled whereas top left in sdl
-                                        return;
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                }
-                tiled::LayerType::ImageLayer(_) => {}
-                tiled::LayerType::GroupLayer(_) => {}
-            }
-        }
-    }
-    panic!("PLAYER SPAWN NOT FOUND");
-}
 
 fn move_player(player: &mut PlayerState, input: &InputState) {
     let mut wanna_move = false;
@@ -262,41 +174,6 @@ fn move_player(player: &mut PlayerState, input: &InputState) {
         player.wants_dir = 0.0;
     }
     player.wants_to_interact = get_key(sdl2::keyboard::Keycode::Up, input);
-}
-
-enum InteractionResult {
-    Nothing,
-    ChangeMap(TilemapState),
-}
-
-fn player_interact(
-    loader: &mut tiled::Loader,
-    lang: &I18n,
-    render: &mut RenderingState,
-    player: &mut PlayerState,
-    enemies: &mut EnemiesState,
-    physics: &mut PhysicsState,
-) -> InteractionResult {
-    if player.can_interact && player.wants_to_interact {
-        let mut interactable = None;
-        for int in physics.interactables.iter() {
-            if int.is_in_collider {
-                interactable = Some(int.clone());
-                break;
-            }
-        }
-        if interactable.is_none() {
-            return InteractionResult::Nothing;
-        }
-        match interactable.unwrap().interaction {
-            Interactions::ChangeMap(path, numb) => {
-                return InteractionResult::ChangeMap(switch_map(
-                    loader, &path, numb, lang, render, player, enemies, physics,
-                ));
-            }
-        }
-    }
-    return InteractionResult::Nothing;
 }
 
 fn input(state: &mut InputState) {

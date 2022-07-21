@@ -1,7 +1,17 @@
 use sdl2::image::LoadTexture;
 use tiled::PropertyValue;
 
-use crate::{physics::Collider, EnemiesState, render::{RenderingState, TilemapState, Animation, AnimationFrame}};
+use crate::{physics::Collider, render::{RenderingState, TilemapState, Animation, AnimationFrame}};
+
+
+pub struct EnemiesState{
+    pub enemies: Vec<Enemy>,
+}
+
+impl EnemiesState {
+    pub fn new() -> Self { Self { enemies:vec![] } }
+}
+
 
 pub struct Enemy{
     pub x: f32,
