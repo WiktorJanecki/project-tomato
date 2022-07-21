@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="50" height="40" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="12">
+<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="50" height="40" tilewidth="8" tileheight="8" infinite="0" nextlayerid="6" nextobjectid="17">
  <tileset firstgid="1" source="startmenu.tsx"/>
  <tileset firstgid="17" source="mariomap_tiles.tsx"/>
  <tileset firstgid="33" source="mariomap_extras.tsx"/>
@@ -43,8 +43,8 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,19,20,19,20,19,20,19,20,19,20,19,20,0,0,0,0,0,0,0,0,0,
-23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,23,24,23,24,23,24,23,24,23,24,23,24,0,0,0,0,0,0,0,0,0
+19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,19,20,0,0,0,0,0,0,0,0,
+23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,23,24,0,0,0,0,0,0,0,0
 </data>
  </layer>
  <layer id="4" name="extras" width="50" height="40">
@@ -98,7 +98,7 @@
   <object id="9" x="144" y="176" width="16" height="16"/>
  </objectgroup>
  <objectgroup id="5" name="Enemies">
-  <object id="10" x="256" y="288" width="16" height="16">
+  <object id="10" x="152" y="160" width="16" height="16">
    <properties>
     <property name="dir" type="int" value="-1"/>
     <property name="texture" value="res/tomato_gumba.png"/>

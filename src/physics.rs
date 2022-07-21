@@ -1,6 +1,6 @@
 use tiled::{PropertyValue};
 
-use crate::{render::TilemapState, PlayerState};
+use crate::{render::TilemapState, PlayerState, enemy::EnemiesState};
 
 #[derive(Default, Clone)]
 pub struct Collider {
@@ -148,12 +148,69 @@ fn is_colliding(x1: i32, y1: i32, w1: i32, h1: i32, x2: i32, y2: i32, w2: i32, h
     return x1 < x2 + w2 && x1 + w1 > x2 && y1 + h1 > y2 && y1 < y2 + h2;
 }
 
-pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
-    let now = std::time::Instant::now();
-    let dt = (now.duration_since(state.dt_timer).as_secs_f64()) as f32;
-    state.dt_timer = std::time::Instant::now();
+pub fn enemies_physics(physics: &PhysicsState, enemies: &mut EnemiesState){
+    for enemy in enemies.enemies.iter_mut(){
+        let obj = enemy;
+        let max_speed: f32 = 50.0;
+        let gravity: f32 = 800.0 * 1.0;
+    
+        obj.velocity.y += gravity * physics.dt;
+        obj.velocity.x = obj.dir as f32* max_speed;
+        let nx = obj.x + obj.velocity.x * physics.dt; // new x
+        let ny = obj.y + obj.velocity.y* physics.dt; // new y
+    
+        let ox = nx + obj.collider.x as f32; // for colliding purposes
+        let oy = ny + obj.collider.y as f32;
+        let ow = obj.collider.w;
+        let oh = obj.collider.h;
+        let mut is_colliding_x = false;
+        let mut is_colliding_y = false;
+    
+        for col in physics.colliders.iter() {
+            if (ox as i32 + ow as i32) > (col.x as i32)
+                && (col.x as i32 + col.w as i32) > (ox as i32)
+                && (obj.y as i32) < (col.y as i32 + col.h as i32)
+                && (obj.y as i32 + oh as i32) > (col.y as i32)
+            {
+                is_colliding_x = true;
+                obj.dir = -obj.dir;
+            }
+            if (obj.x as i32 + ow as i32) > (col.x as i32)
+                && (col.x as i32 + col.w as i32) > (obj.x as i32)
+                && (oy as i32) < (col.y as i32 + col.h as i32)
+                && (oy as i32 + oh as i32) > (col.y as i32)
+            {
+                is_colliding_y = true;
+                obj.velocity.y = 0.0;
+            }
+        }
+    
+        if !is_colliding_x {
+            obj.x = nx;
+        }
+        if !is_colliding_y {
+            obj.y = ny;
+        }
+    
+        if obj.x < 0.0{
+            obj.x = 0.0;
+        }
+        if obj.y < 0.0{
+            obj.y = 0.0;
+        }
 
+    }
+}
+
+pub fn count_dt(state: &mut PhysicsState){
+    let now = std::time::Instant::now();
+    state.dt = (now.duration_since(state.dt_timer).as_secs_f64()) as f32;
+    state.dt_timer = std::time::Instant::now();
+}
+
+pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
     let mut obj = player;
+    let dt = state.dt;
 
     let max_speed: f32 = 150.0;
     let sliding_speed: f32 = 100.0;
@@ -271,5 +328,4 @@ pub fn player_physics(state: &mut PhysicsState, player: &mut PlayerState) {
     if obj.y < 0.0{
         obj.y = 0.0;
     }
-    player_collision_interactables(state, obj);
 }

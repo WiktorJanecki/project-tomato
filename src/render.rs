@@ -32,7 +32,7 @@ pub struct RenderingState {
 
     pub text_hints: Vec<Layout<Color>>,
 }
-
+#[derive(Clone)]
 pub struct AnimationFrame{
     pub x: i32,
     pub y: i32,
@@ -40,6 +40,7 @@ pub struct AnimationFrame{
     pub h: u32,
 }
 
+#[derive(Clone)]
 pub struct Animation{
     pub frames: Vec<AnimationFrame>,
     pub time_per_frame: f32,

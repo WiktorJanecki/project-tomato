@@ -1,23 +1,25 @@
+use glam::Vec2;
 use sdl2::image::LoadTexture;
 use tiled::PropertyValue;
 
 use crate::{physics::Collider, render::{RenderingState, TilemapState, Animation, AnimationFrame}};
 
-
+#[derive(Clone)]
 pub struct EnemiesState{
-    pub enemies: Vec<Enemy>,
+    pub  enemies: Vec<Enemy>,
 }
 
 impl EnemiesState {
     pub fn new() -> Self { Self { enemies:vec![] } }
 }
 
-
+#[derive(Clone)]
 pub struct Enemy{
     pub x: f32,
     pub y: f32,
     pub width: u32,
     pub height: u32,
+    pub velocity: Vec2,
     pub collider: Collider,
     pub dir: i32,
     pub texture_path: String,
@@ -44,7 +46,7 @@ pub fn load_tilemap_to_enemies(enemies: &mut EnemiesState, tile_state: &TilemapS
                                 let y = obj.y as i32;
                                 let w = width as u32;
                                 let h = height as u32;
-                                let col = Collider { x, y, w, h };
+                                let col = Collider { y:0, x:0, w, h };
                                 let dir = if let PropertyValue::IntValue(dir) = obj.properties.get("dir").unwrap() {dir} else {panic!()};
                                 let txt = if let PropertyValue::StringValue(txt) = obj.properties.get("texture").unwrap() {txt} else {panic!()};
                                 if !render.textures.contains_key(txt){
@@ -57,7 +59,7 @@ pub fn load_tilemap_to_enemies(enemies: &mut EnemiesState, tile_state: &TilemapS
                                     let mut animation = Animation::new(animation_time);
                                     animation.frames.push(AnimationFrame{x: 0, y: 0, w: 16, h:16});
                                     animation.frames.push(AnimationFrame{x: 16, y: 0, w: 16, h:16});
-                                    let enemy = Enemy{x: x as f32, y: y as f32, width: w, height: h, collider: col, dir: *dir, texture_path: txt.to_owned(), animation: animation};
+                                    let enemy = Enemy{velocity: Vec2::ZERO,x: x as f32, y: y as f32, width: w, height: h, collider: col, dir: *dir, texture_path: txt.to_owned(), animation: animation};
                                     enemies_vec.push(enemy);
                                 }
                             }

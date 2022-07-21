@@ -51,11 +51,9 @@ pub fn main() -> Result<(), String> {
     };
     let mut player_state = PlayerState::new(0.0, 0.0);
     let mut physics_state = PhysicsState::default();
-    let mut enemies_state = EnemiesState { enemies: vec![] };
+    let mut enemies_state = EnemiesState::new();
     let mut animation_state = AnimationState::new();
 
-    let pool = threadpool::ThreadPool::new(num_cpus::get());
-    let (send_player_physics, recv_player_physics) = std::sync::mpsc::channel();
     let i18n_config: I18nConfig = I18nConfig {
         locales: &["en", "pl"],
         directory: "res/translations/",
@@ -81,6 +79,7 @@ pub fn main() -> Result<(), String> {
         let frame_timer = std::time::Instant::now();
         let render_player_state = player_state.clone();
         let render_physics_state = physics_state.clone();
+        let render_enemies_state = enemies_state.clone();
 
         input(&mut input_state);
         if input_state.should_quit {
@@ -89,24 +88,19 @@ pub fn main() -> Result<(), String> {
 
         move_player(&mut player_state, &input_state);
         animate(&mut animation_state, &mut player_state, &mut enemies_state);
-
-        let sender = send_player_physics.clone();
-        pool.execute(move || {
-            player_physics(&mut physics_state, &mut player_state);
-            sender.send((physics_state, player_state)).unwrap();
-        });
+        count_dt(&mut physics_state);
+        player_physics(&physics_state, &mut player_state);
+        enemies_physics(&physics_state, &mut enemies_state);
+        player_collision_interactables(&mut physics_state, &mut player_state);
 
         render(
             &mut rendering_state,
             &mut lang,
             &mut start_map,
             &render_player_state,
-            &enemies_state,
+            &render_enemies_state,
             &render_physics_state,
         );
-
-        pool.join();
-        (physics_state, player_state) = recv_player_physics.recv().unwrap();
 
         let interaction_result = player_interact(
             &mut loader,
