@@ -93,6 +93,8 @@ pub fn main() -> Result<(), String> {
         enemies_physics(&physics_state, &mut enemies_state);
         player_collision_interactables(&mut physics_state, &mut player_state);
 
+        //println!("STATE: {:?}", player_state.state);
+
         render(
             &mut rendering_state,
             &mut lang,
@@ -113,6 +115,7 @@ pub fn main() -> Result<(), String> {
         match interaction_result {
             InteractionResult::Nothing => {}
             InteractionResult::ChangeMap(new_map) => start_map = new_map,
+            InteractionResult::Talk(talk_id) => println!("{talk_id}"),
         }
 
         let _frame_end_time = frame_timer.elapsed();
@@ -164,7 +167,14 @@ fn move_player(player: &mut PlayerState, input: &InputState) {
     } else {
         player.wants_to_jump = false;
     }
-    if !wanna_move {
+    if wanna_move{
+        if player.state == PlayerStateMachine::Idling{
+            player.state = PlayerStateMachine::Walking;
+        }
+    }else {
+        if player.state == PlayerStateMachine::Walking{
+            player.state = PlayerStateMachine::Idling;
+        }
         player.wants_dir = 0.0;
     }
     player.wants_to_interact = get_key(sdl2::keyboard::Keycode::Up, input);

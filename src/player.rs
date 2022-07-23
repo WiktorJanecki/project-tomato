@@ -3,6 +3,14 @@ use r_i18n::I18n;
 
 use crate::{physics::{Collider, PhysicsState, Interactions}, switch_map, enemy::EnemiesState, render::{RenderingState, TilemapState}};
 
+#[derive(Clone, PartialEq, Debug)]
+pub enum PlayerStateMachine{
+    Idling,
+    Walking,
+    Falling,
+    Talking,
+}
+
 #[derive(Clone)]
 pub struct PlayerState {
     pub _player_sprite_path: &'static str,
@@ -10,18 +18,22 @@ pub struct PlayerState {
     pub y: f32,
     pub width: u32,
     pub height: u32,
+
     pub hitbox: Collider,
-    pub wants_dir: f32,
+
     pub added_velocity: Vec2,
     pub velocity: Vec2,
     pub acceleration: Vec2,
+
+    pub wants_dir: f32,
     pub wants_to_jump: bool,
+    pub wants_to_interact: bool,
+
+    pub state: PlayerStateMachine,
     pub is_grounded: bool,
-    pub is_falling: bool,
     pub is_sliding: bool,
     pub coyote_time_counter: f32,
     pub jump_buffer_counter: f32,
-    pub wants_to_interact: bool,
     pub can_interact: bool,
 }
 
@@ -45,12 +57,12 @@ impl PlayerState {
             acceleration: Vec2::ZERO,
             wants_to_jump: false,
             is_grounded: false,
-            is_falling: false,
             is_sliding: false,
             coyote_time_counter: 0.0,
             jump_buffer_counter: 0.0,
             wants_to_interact: false,
             can_interact: false,
+            state: PlayerStateMachine::Idling,
         }
     }
 }
@@ -88,6 +100,7 @@ pub fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u
 pub enum InteractionResult {
     Nothing,
     ChangeMap(TilemapState),
+    Talk(u32),
 }
 
 pub fn player_interact(
@@ -98,7 +111,7 @@ pub fn player_interact(
     enemies: &mut EnemiesState,
     physics: &mut PhysicsState,
 ) -> InteractionResult {
-    if player.can_interact && player.wants_to_interact {
+    if player.can_interact && player.wants_to_interact && (player.state == PlayerStateMachine::Idling || player.state == PlayerStateMachine::Walking) {
         let mut interactable = None;
         for int in physics.interactables.iter() {
             if int.is_in_collider {
@@ -114,6 +127,10 @@ pub fn player_interact(
                 return InteractionResult::ChangeMap(switch_map(
                     loader, &path, numb, lang, render, player, enemies, physics,
                 ));
+            },
+            Interactions::Talk(talk_id) => {
+                player.state = PlayerStateMachine::Talking;
+                return InteractionResult::Talk(talk_id);
             }
         }
     }

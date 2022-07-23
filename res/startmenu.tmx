@@ -51,7 +51,11 @@
 </data>
  </layer>
  <objectgroup id="5" name="Interactables">
-  <object id="27" name="Options" x="224" y="232" width="64" height="32"/>
+  <object id="27" name="Options" x="224" y="232" width="64" height="32">
+   <properties>
+    <property name="talk id" type="int" value="0"/>
+   </properties>
+  </object>
   <object id="30" name="Play" x="32" y="232" width="64" height="32">
    <properties>
     <property name="map change" value="res/testmap.tmx"/>

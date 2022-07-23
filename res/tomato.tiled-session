@@ -36,8 +36,8 @@
             "scale": 3,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 143.33333333333331,
-                "y": 234.66666666666666
+                "x": 223,
+                "y": 245
             }
         },
         "textmap.tmx": {
@@ -67,7 +67,7 @@
         "mariomap_extras.tsx"
     ],
     "project": "tomato.tiled-project",
-    "property.type": "string",
+    "property.type": "int",
     "recentFiles": [
         "startmenu.tmx",
         "startmenu.tsx",

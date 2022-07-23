@@ -1,6 +1,6 @@
 use tiled::{PropertyValue};
 
-use crate::{render::TilemapState, PlayerState, enemy::EnemiesState};
+use crate::{render::TilemapState, PlayerState, enemy::EnemiesState, player::PlayerStateMachine};
 
 #[derive(Default, Clone)]
 pub struct Collider {
@@ -14,6 +14,7 @@ pub struct Collider {
 pub enum Interactions {
     /// Map path and spawn number
     ChangeMap(String, u32),
+    Talk(u32),
 }
 
 #[derive(Clone)]
@@ -79,6 +80,14 @@ pub fn load_tilemap_to_interactables(state: &mut PhysicsState, tile_state: &Tile
                                     interactables.push(Interactable {
                                         collider: col,
                                         interaction: interaction,
+                                        is_in_collider: false,
+                                    })
+                                }
+                                else if let Some(talk_id) = obj.properties.get("talk id"){
+                                    let talk_id = if let PropertyValue::IntValue(talk_id) = talk_id {talk_id} else{panic!()};
+                                    interactables.push(Interactable {
+                                        collider: col,
+                                        interaction: Interactions::Talk(*talk_id as u32),
                                         is_in_collider: false,
                                     })
                                 }
@@ -227,7 +236,9 @@ pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
     // JUMP AND GRAVITY = VELOCITY
 
     obj.acceleration.x = obj.wants_dir * accel;
-    obj.added_velocity.x += obj.acceleration.x * dt;
+    if obj.state == PlayerStateMachine::Walking || obj.state == PlayerStateMachine::Falling{
+        obj.added_velocity.x += obj.acceleration.x * dt;
+    }
     obj.added_velocity.x = obj.added_velocity.x.clamp(-max_speed, max_speed);
 
     obj.velocity.y += gravity * dt;
@@ -285,7 +296,7 @@ pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
 
     obj.is_grounded = false;
     obj.is_sliding = false;
-    obj.is_falling = true;
+    let mut is_falling = true;
     let mut is_colliding_x = false;
     let mut is_colliding_y = false;
 
@@ -308,7 +319,7 @@ pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
         {
             is_colliding_y = true;
             obj.velocity.y = 0.0;
-            obj.is_falling = false;
+            is_falling = false;
             if oy as i32 >= obj.y as i32 {
                 obj.is_grounded = true;
             }
@@ -327,5 +338,13 @@ pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
     }
     if obj.y < 0.0{
         obj.y = 0.0;
+    }
+
+    // state
+    if is_falling && (obj.state == PlayerStateMachine::Walking || obj.state == PlayerStateMachine::Idling){
+        obj.state = PlayerStateMachine::Falling;
+    }
+    if !is_falling && obj.state == PlayerStateMachine::Falling{
+        obj.state = PlayerStateMachine::Idling;
     }
 }
