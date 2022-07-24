@@ -3,6 +3,7 @@ extern crate sdl2;
 use fontdue::layout::Layout;
 use fontdue::layout::LayoutSettings;
 use fontdue::layout::TextStyle;
+use json::JsonValue;
 use r_i18n::I18n;
 use r_i18n::I18nConfig;
 use sdl2::event::Event;
@@ -29,6 +30,7 @@ pub struct DialogState{
     texts: Vec<String>,
     finished: bool,
     show: bool,
+    dialogues: JsonValue,
 
 }
 
@@ -43,6 +45,7 @@ impl DialogState{
             texts: vec![],//vec!["asdf".to_owned(), "dfasdgasdg".to_owned(), "ahrhger".to_owned()],
             finished: false,
             show: false,
+            dialogues: json::parse(&std::fs::read_to_string("res/dialogues.json").unwrap()).unwrap(),
         }
     }
 }
@@ -57,7 +60,8 @@ pub fn apply_word_wrap_to_dialog(render: &RenderingState ,dialog: &mut DialogSta
     dialog.layout.reset(&settings);
     dialog.layout.append(render.fonts.as_slice(), &TextStyle::with_user_data(&dialog.text, font_size, dialog.font, Color::WHITE));
     let mut new_text = dialog.text.clone();
-    let new_line_places:Vec<_> = dialog.layout.lines().unwrap().iter().map(|e| e.glyph_end).collect();
+    let mut new_line_places:Vec<_> = dialog.layout.lines().unwrap().iter().map(|e| e.glyph_end).collect();
+    new_line_places.pop();
     for place in new_line_places.iter(){
         new_text = replace_nth_char(&new_text, *place, '\n');
     }
@@ -67,7 +71,7 @@ pub fn apply_word_wrap_to_dialog(render: &RenderingState ,dialog: &mut DialogSta
     }
 }
 
-pub fn update_dialog(dialog: &mut DialogState, input: &InputState, _lang: &I18n, player: &mut PlayerState){
+pub fn update_dialog(dialog: &mut DialogState, input: &InputState, player: &mut PlayerState, render: &RenderingState){
     dialog.show = true;
     let wants_to_continue = get_key_pressed(Keycode::Z, input);
     let wants_to_skip = get_key_pressed(Keycode::X, input);
@@ -76,6 +80,7 @@ pub fn update_dialog(dialog: &mut DialogState, input: &InputState, _lang: &I18n,
         dialog.finished = false;
         dialog.text = dialog.texts.first().unwrap().clone();
         dialog.texts.remove(0);
+        apply_word_wrap_to_dialog(render, dialog);
     }
     if wants_to_skip{
         dialog.current_char = 999;
@@ -93,7 +98,33 @@ pub fn update_dialog(dialog: &mut DialogState, input: &InputState, _lang: &I18n,
         dialog.finished = false;
         dialog.text = dialog.texts.first().unwrap().clone();
         dialog.texts.remove(0);
+        dialog.current_char = 0;
+        apply_word_wrap_to_dialog(render, dialog);
     }
+}
+
+pub fn set_dialog_from_id(id: u32, dialog: &mut DialogState, lang: &I18n){
+    match dialog.dialogues.clone(){
+        JsonValue::Object(whole) => {
+            let objj = whole.get(&id.to_string()).unwrap();
+            match objj{
+                JsonValue::Object(obj) => {
+                    let _dialog_type = obj.get("type").unwrap().as_str().unwrap();
+                    let texts_array = if let JsonValue::Array(texts) = obj.get("texts").unwrap() {texts} else {panic!()};
+                    let texts: Vec<String> = texts_array.iter()
+                        .map(|text| if let JsonValue::Short(texte) = text {texte.as_str()} else {panic!()})
+                        .map(|v| lang.t(v).as_str().unwrap().to_owned())
+                        .collect();
+
+                    dialog.texts = texts;
+                    return;
+                },
+                _ => {},
+            }
+        },
+        _=>{}
+    }
+    panic!("Failed to parse dialogues.json");
 }
 
 
@@ -154,7 +185,6 @@ pub fn main() -> Result<(), String> {
         &mut enemies_state,
         &mut physics_state,
     );
-    apply_word_wrap_to_dialog(&rendering_state, &mut dialog_state);
     // -------------------- GAME LOOP -------------------- //
 
     loop {
@@ -165,7 +195,7 @@ pub fn main() -> Result<(), String> {
 
         input(&mut input_state);
         if player_state.state == PlayerStateMachine::Talking{
-            update_dialog(&mut dialog_state, &input_state, &lang, &mut player_state);
+            update_dialog(&mut dialog_state, &input_state, &mut player_state, &rendering_state);
         }
         else{
             move_player(&mut player_state, &input_state);
@@ -199,7 +229,7 @@ pub fn main() -> Result<(), String> {
         match interaction_result {
             InteractionResult::Nothing => {}
             InteractionResult::ChangeMap(new_map) => start_map = new_map,
-            InteractionResult::Talk(talk_id) => {dialog_state.texts.push(talk_id.to_string())},
+            InteractionResult::Talk(talk_id) => {set_dialog_from_id(talk_id, &mut dialog_state, &lang)},
         }
 
         let _frame_end_time = frame_timer.elapsed();

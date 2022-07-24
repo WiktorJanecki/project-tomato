@@ -1,5 +1,8 @@
 {
     "test": "Zajebiście!",
     "play button": "GRAJ",
-    "options button": "OPCJE"
+    "options button": "OPCJE",
+
+    "option-dialogue-1": "Nie uważam, że ta gra wymaga ustawiania czegoś do świetnej zabawy",
+    "option-dialogue-2": "Lepiej nie będzie"
 }

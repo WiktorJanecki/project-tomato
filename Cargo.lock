@@ -108,6 +108,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92c245af8786f6ac35f95ca14feca9119e71339aaab41e878e7cdd655c97e9e5"
 
 [[package]]
+name = "json"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -171,6 +177,7 @@ dependencies = [
  "fontdue",
  "fontdue-sdl2",
  "glam",
+ "json 0.12.4",
  "num_cpus",
  "r_i18n",
  "sdl2",
@@ -184,7 +191,7 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84a846f4a3890d674556653d69befe1a67e799254d8c148ef47d327be3ba5bc6"
 dependencies = [
- "json",
+ "json 0.11.15",
 ]
 
 [[package]]

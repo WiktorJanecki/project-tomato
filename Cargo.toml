@@ -17,3 +17,4 @@ num_cpus = "1.13.1"
 tiled = {version="0.10.2",default-features = false}
 glam = "0.21.2"
 r_i18n = "1.0.1"
+json = "0.12.4"

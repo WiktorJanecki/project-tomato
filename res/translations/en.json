@@ -1,5 +1,8 @@
 {
     "test": "DUPA",
     "play button": "PLAY",
-    "options button": "OPTIONS"
+    "options button": "OPTIONS",
+
+    "option-dialogue-1": "I don't think this game needs some tweaking to work great ",
+    "option-dialogue-2": "It already does"
 }

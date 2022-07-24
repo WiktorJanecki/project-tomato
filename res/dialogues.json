@@ -1,0 +1,9 @@
+{
+    "0":{
+        "type": "interaction",
+        "texts":[
+            "option-dialogue-1",
+            "option-dialogue-2"
+        ]
+    }
+}
