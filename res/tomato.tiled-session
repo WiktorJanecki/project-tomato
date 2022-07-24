@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "testmap.tmx",
+    "activeFile": "startmenu.tmx",
     "expandedProjectPaths": [
         "."
     ],
@@ -22,10 +22,10 @@
                 2
             ],
             "scale": 5.5,
-            "selectedLayer": 2,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 160,
-                "y": 179.9090909090909
+                "x": 190.54545454545456,
+                "y": 219.1818181818182
             }
         },
         "startmenu.tsx": {
@@ -69,11 +69,11 @@
     "project": "tomato.tiled-project",
     "property.type": "int",
     "recentFiles": [
-        "startmenu.tmx",
-        "startmenu.tsx",
         "mariomap_extras.tsx",
         "mariomap_tiles.tsx",
         "testmap.tmx",
+        "startmenu.tsx",
+        "startmenu.tmx",
         "textmap.tmx"
     ],
     "resizeMap.removeObjects": true,

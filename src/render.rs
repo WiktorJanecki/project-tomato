@@ -8,6 +8,7 @@ use fontdue_sdl2::FontTexture;
 use r_i18n::I18n;
 use sdl2::image::LoadTexture;
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::render::Texture;
 use sdl2::render::TextureCreator;
@@ -16,6 +17,7 @@ use sdl2::video::WindowContext;
 use tiled::ObjectShape;
 use tiled::PropertyValue;
 
+use crate::DialogState;
 use crate::EnemiesState;
 use crate::PhysicsState;
 use crate::PlayerState;
@@ -185,6 +187,31 @@ pub fn load_tilemap_to_text_hints(state: &mut RenderingState, tile: &TilemapStat
     }
 }
 
+fn render_dialog(render: &mut RenderingState, dialog: &mut DialogState, lang: &I18n){
+    let (canvas_w, canvas_h) = render.canvas.logical_size();
+
+    let margin = 5u32;
+    //let frame = 2u32;
+    let height = 70u32;
+    let bg = Rect::new((margin) as i32, (canvas_h - margin - height) as i32,canvas_w - margin - margin, height);
+    render.canvas.set_draw_color(Color::BLACK);
+    render.canvas.fill_rect(bg).unwrap();
+    render.canvas.set_draw_color(dialog.color);
+    render.canvas.draw_rect(bg).unwrap();
+    let settings = LayoutSettings{ x: (margin + margin) as f32, y: (canvas_h-margin+margin-height) as f32, max_width: Some((canvas_w-4*margin) as f32), ..LayoutSettings::default() };
+    dialog.layout.reset(&settings);
+    let font_size = 8.0;
+    dialog.current_char+=1;
+    dialog.current_char = dialog.current_char.clamp(0, dialog.text.len());
+    let text = &dialog.text[..dialog.current_char];
+    dialog.layout.append(render.fonts.as_slice(), &TextStyle::with_user_data(text, font_size, dialog.font, Color::WHITE));
+    if dialog.layout.lines().unwrap().last().unwrap().baseline_y > (canvas_h - margin) as f32{ // SOME ERROR HANDLING PLZ
+        println!("PRZYPAŁ");
+    }
+
+    render.font_texture.draw_text(&mut render.canvas, &render.fonts, dialog.layout.glyphs()).unwrap();
+}
+
 fn render_tilemap(state: &mut RenderingState, tile_state: &TilemapState) {
     for layer in tile_state.layers() {
         match layer.layer_type() {
@@ -254,11 +281,12 @@ pub fn render_text_hints(state: &mut RenderingState) {
 
 pub fn render(
     state: &mut RenderingState,
-    _lang: &mut I18n,
+    lang: &mut I18n,
     tile_state: &TilemapState,
     player: &PlayerState,
     enemies: &EnemiesState,
     _physics: &PhysicsState,
+    dialog: &mut DialogState,
 ) {
     state.canvas.set_draw_color(Color::RGB(0, 0, 0));
     state.canvas.clear();
@@ -294,7 +322,7 @@ pub fn render(
     render_tilemap(state, tile_state);
     render_text_hints(state);
     render_enemies(state, enemies);
-
+    
     // render player
     let dst = sdl2::rect::Rect::new(
         player.x as i32 + state.camera.x,
@@ -316,8 +344,9 @@ pub fn render(
         txt.set_color_mod(255, 255, 255);
         state.canvas.copy(txt, None, dst).unwrap();
     }
-
+    
     //_render_colliders(state,player,_physics);
+    render_dialog(state,dialog,lang);
     state.canvas.present();
 }
 

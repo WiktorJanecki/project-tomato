@@ -1,10 +1,14 @@
 extern crate sdl2;
 
+use fontdue::layout::Layout;
+use fontdue::layout::LayoutSettings;
+use fontdue::layout::TextStyle;
 use r_i18n::I18n;
 use r_i18n::I18nConfig;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::EventPump;
+use sdl2::pixels::Color;
 use std::collections::HashMap;
 
 mod render;
@@ -15,6 +19,47 @@ mod enemy;
 use crate::enemy::*;
 mod player;
 use crate::player::*;
+
+pub struct DialogState{
+    color: Color,
+    font: usize,
+    layout: Layout<Color>,
+    current_char: usize,
+    text: String,
+
+}
+
+impl DialogState{
+    pub fn new() -> Self{
+        Self{
+            color: Color::GREEN,
+            font: 0,
+            current_char:0,
+            layout: Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown),
+            text: "An optional rightmow. If the width of a glyph is larger than the max_width, the glyph will overflow past the max_width. The application is responsible for handling the overflow.".to_owned(),
+        }
+    }
+}
+
+pub fn apply_word_wrap_to_dialog(render: &RenderingState ,dialog: &mut DialogState){
+    let (canvas_w, canvas_h) = render.canvas.logical_size();
+    let margin = 5u32;
+    let height = 70u32;
+    let font_size= 8.0;
+    let settings = LayoutSettings{ x: (margin + margin) as f32, y: (canvas_h-margin+margin-height) as f32, max_width: Some((canvas_w-4*margin) as f32), ..LayoutSettings::default() };
+    dialog.layout.reset(&settings);
+    dialog.layout.append(render.fonts.as_slice(), &TextStyle::with_user_data(&dialog.text, font_size, dialog.font, Color::WHITE));
+    let mut new_text = dialog.text.clone();
+    let new_line_places:Vec<_> = dialog.layout.lines().unwrap().iter().map(|e| e.glyph_end).collect();
+    for place in new_line_places.iter(){
+        new_text = replace_nth_char(&new_text, *place, '\n');
+    }
+    dialog.text = new_text;
+    fn replace_nth_char(s: &str, idx: usize, newchar: char) -> String {
+        s.chars().enumerate().map(|(i,c)| if i == idx { newchar } else { c }).collect()
+    }
+}
+
 
 struct InputState {
     event_pump: EventPump,
@@ -53,6 +98,7 @@ pub fn main() -> Result<(), String> {
     let mut physics_state = PhysicsState::default();
     let mut enemies_state = EnemiesState::new();
     let mut animation_state = AnimationState::new();
+    let mut dialog_state = DialogState::new();
 
     let i18n_config: I18nConfig = I18nConfig {
         locales: &["en", "pl"],
@@ -72,7 +118,7 @@ pub fn main() -> Result<(), String> {
         &mut enemies_state,
         &mut physics_state,
     );
-
+    apply_word_wrap_to_dialog(&rendering_state, &mut dialog_state);
     // -------------------- GAME LOOP -------------------- //
 
     loop {
@@ -102,6 +148,7 @@ pub fn main() -> Result<(), String> {
             &render_player_state,
             &render_enemies_state,
             &render_physics_state,
+            &mut dialog_state,
         );
 
         let interaction_result = player_interact(
