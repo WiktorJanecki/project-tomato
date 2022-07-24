@@ -248,7 +248,6 @@ pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
     } else {
         obj.coyote_time_counter -= dt;
     }
-
     if obj.wants_to_jump {
         obj.jump_buffer_counter = jump_buffer_time;
     } else {

@@ -26,6 +26,9 @@ pub struct DialogState{
     layout: Layout<Color>,
     current_char: usize,
     text: String,
+    texts: Vec<String>,
+    finished: bool,
+    show: bool,
 
 }
 
@@ -36,12 +39,16 @@ impl DialogState{
             font: 0,
             current_char:0,
             layout: Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown),
-            text: "An optional rightmow. If the width of a glyph is larger than the max_width, the glyph will overflow past the max_width. The application is responsible for handling the overflow.".to_owned(),
+            text: "".to_owned(),
+            texts: vec![],//vec!["asdf".to_owned(), "dfasdgasdg".to_owned(), "ahrhger".to_owned()],
+            finished: false,
+            show: false,
         }
     }
 }
 
 pub fn apply_word_wrap_to_dialog(render: &RenderingState ,dialog: &mut DialogState){
+    if dialog.text.is_empty() {return};
     let (canvas_w, canvas_h) = render.canvas.logical_size();
     let margin = 5u32;
     let height = 70u32;
@@ -60,13 +67,42 @@ pub fn apply_word_wrap_to_dialog(render: &RenderingState ,dialog: &mut DialogSta
     }
 }
 
+pub fn update_dialog(dialog: &mut DialogState, input: &InputState, _lang: &I18n, player: &mut PlayerState){
+    dialog.show = true;
+    let wants_to_continue = get_key_pressed(Keycode::Z, input);
+    let wants_to_skip = get_key_pressed(Keycode::X, input);
 
-struct InputState {
-    event_pump: EventPump,
-    should_quit: bool,
-    key_pressed_state: HashMap<Keycode, bool>,
-    key_released_state: HashMap<Keycode, bool>,
-    key_state: HashMap<Keycode, bool>,
+    if dialog.text.is_empty() && !dialog.texts.is_empty(){
+        dialog.finished = false;
+        dialog.text = dialog.texts.first().unwrap().clone();
+        dialog.texts.remove(0);
+    }
+    if wants_to_skip{
+        dialog.current_char = 999;
+        dialog.finished = true;
+    }
+    if dialog.texts.is_empty() && wants_to_continue && dialog.finished{
+        dialog.finished = true;
+        dialog.show = false;
+        player.state = PlayerStateMachine::Idling;
+        player.wants_to_interact = false;
+        dialog.current_char = 0;
+        dialog.text.clear();
+    }
+    else if wants_to_continue && dialog.finished{
+        dialog.finished = false;
+        dialog.text = dialog.texts.first().unwrap().clone();
+        dialog.texts.remove(0);
+    }
+}
+
+
+pub struct InputState {
+    pub event_pump: EventPump,
+    pub should_quit: bool,
+    pub key_pressed_state: HashMap<Keycode, bool>,
+    pub key_released_state: HashMap<Keycode, bool>,
+    pub key_state: HashMap<Keycode, bool>,
 }
 
 pub fn main() -> Result<(), String> {
@@ -128,11 +164,12 @@ pub fn main() -> Result<(), String> {
         let render_enemies_state = enemies_state.clone();
 
         input(&mut input_state);
-        if input_state.should_quit {
-            break;
-        };
-
-        move_player(&mut player_state, &input_state);
+        if player_state.state == PlayerStateMachine::Talking{
+            update_dialog(&mut dialog_state, &input_state, &lang, &mut player_state);
+        }
+        else{
+            move_player(&mut player_state, &input_state);
+        }
         animate(&mut animation_state, &mut player_state, &mut enemies_state);
         count_dt(&mut physics_state);
         player_physics(&physics_state, &mut player_state);
@@ -162,12 +199,15 @@ pub fn main() -> Result<(), String> {
         match interaction_result {
             InteractionResult::Nothing => {}
             InteractionResult::ChangeMap(new_map) => start_map = new_map,
-            InteractionResult::Talk(talk_id) => println!("{talk_id}"),
+            InteractionResult::Talk(talk_id) => {dialog_state.texts.push(talk_id.to_string())},
         }
 
         let _frame_end_time = frame_timer.elapsed();
         //println!("{}", 1.0/_frame_end_time.as_secs_f64());
         std::thread::sleep(std::time::Duration::from_millis(16)); // ONLY FOR DEV PURPOSES
+        if input_state.should_quit {
+            break;
+        };
     }
 
     Ok(())

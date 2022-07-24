@@ -187,7 +187,8 @@ pub fn load_tilemap_to_text_hints(state: &mut RenderingState, tile: &TilemapStat
     }
 }
 
-fn render_dialog(render: &mut RenderingState, dialog: &mut DialogState, lang: &I18n){
+fn render_dialog(render: &mut RenderingState, dialog: &mut DialogState, _lang: &I18n){
+    if !dialog.show {return}
     let (canvas_w, canvas_h) = render.canvas.logical_size();
 
     let margin = 5u32;
@@ -202,7 +203,10 @@ fn render_dialog(render: &mut RenderingState, dialog: &mut DialogState, lang: &I
     dialog.layout.reset(&settings);
     let font_size = 8.0;
     dialog.current_char+=1;
-    dialog.current_char = dialog.current_char.clamp(0, dialog.text.len());
+    if dialog.current_char > dialog.text.len(){
+        dialog.finished = true;
+        dialog.current_char = dialog.text.len();
+    }
     let text = &dialog.text[..dialog.current_char];
     dialog.layout.append(render.fonts.as_slice(), &TextStyle::with_user_data(text, font_size, dialog.font, Color::WHITE));
     if dialog.layout.lines().unwrap().last().unwrap().baseline_y > (canvas_h - margin) as f32{ // SOME ERROR HANDLING PLZ
