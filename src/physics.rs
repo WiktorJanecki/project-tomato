@@ -14,7 +14,7 @@ pub struct Collider {
 pub enum Interactions {
     /// Map path and spawn number
     ChangeMap(String, u32),
-    Talk(u32),
+    Inspect(u32),
 }
 
 #[derive(Clone)]
@@ -83,11 +83,11 @@ pub fn load_tilemap_to_interactables(state: &mut PhysicsState, tile_state: &Tile
                                         is_in_collider: false,
                                     })
                                 }
-                                else if let Some(talk_id) = obj.properties.get("talk id"){
-                                    let talk_id = if let PropertyValue::IntValue(talk_id) = talk_id {talk_id} else{panic!()};
+                                else if let Some(inspect_id) = obj.properties.get("inspect id"){
+                                    let inspect_id = if let PropertyValue::IntValue(inspect_id) = inspect_id {inspect_id} else{panic!()};
                                     interactables.push(Interactable {
                                         collider: col,
-                                        interaction: Interactions::Talk(*talk_id as u32),
+                                        interaction: Interactions::Inspect(*inspect_id as u32),
                                         is_in_collider: false,
                                     })
                                 }

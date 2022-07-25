@@ -229,7 +229,7 @@ pub fn main() -> Result<(), String> {
         match interaction_result {
             InteractionResult::Nothing => {}
             InteractionResult::ChangeMap(new_map) => start_map = new_map,
-            InteractionResult::Talk(talk_id) => {set_dialog_from_id(talk_id, &mut dialog_state, &lang)},
+            InteractionResult::Inspect(inspect_id) => {set_dialog_from_id(inspect_id, &mut dialog_state, &lang)},
         }
 
         let _frame_end_time = frame_timer.elapsed();

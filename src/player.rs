@@ -100,7 +100,7 @@ pub fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u
 pub enum InteractionResult {
     Nothing,
     ChangeMap(TilemapState),
-    Talk(u32),
+    Inspect(u32),
 }
 
 pub fn player_interact(
@@ -128,9 +128,9 @@ pub fn player_interact(
                     loader, &path, numb, lang, render, player, enemies, physics,
                 ));
             },
-            Interactions::Talk(talk_id) => {
+            Interactions::Inspect(inspect_id) => {
                 player.state = PlayerStateMachine::Talking;
-                return InteractionResult::Talk(talk_id);
+                return InteractionResult::Inspect(inspect_id);
             }
         }
     }
