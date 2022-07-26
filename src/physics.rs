@@ -1,6 +1,6 @@
-use tiled::{PropertyValue};
+use tiled::PropertyValue;
 
-use crate::{render::TilemapState, PlayerState, enemy::EnemiesState, player::PlayerStateMachine};
+use crate::{enemy::EnemiesState, player::PlayerStateMachine, render::TilemapState, PlayerState};
 
 #[derive(Default, Clone)]
 pub struct Collider {
@@ -82,9 +82,13 @@ pub fn load_tilemap_to_interactables(state: &mut PhysicsState, tile_state: &Tile
                                         interaction: interaction,
                                         is_in_collider: false,
                                     })
-                                }
-                                else if let Some(inspect_id) = obj.properties.get("inspect id"){
-                                    let inspect_id = if let PropertyValue::IntValue(inspect_id) = inspect_id {inspect_id} else{panic!()};
+                                } else if let Some(inspect_id) = obj.properties.get("inspect id") {
+                                    let inspect_id =
+                                        if let PropertyValue::IntValue(inspect_id) = inspect_id {
+                                            inspect_id
+                                        } else {
+                                            panic!()
+                                        };
                                     interactables.push(Interactable {
                                         collider: col,
                                         interaction: Interactions::Inspect(*inspect_id as u32),
@@ -157,24 +161,24 @@ fn is_colliding(x1: i32, y1: i32, w1: i32, h1: i32, x2: i32, y2: i32, w2: i32, h
     return x1 < x2 + w2 && x1 + w1 > x2 && y1 + h1 > y2 && y1 < y2 + h2;
 }
 
-pub fn enemies_physics(physics: &PhysicsState, enemies: &mut EnemiesState){
-    for enemy in enemies.enemies.iter_mut(){
+pub fn enemies_physics(physics: &PhysicsState, enemies: &mut EnemiesState) {
+    for enemy in enemies.enemies.iter_mut() {
         let obj = enemy;
         let max_speed: f32 = 50.0;
         let gravity: f32 = 800.0 * 1.0;
-    
+
         obj.velocity.y += gravity * physics.dt;
-        obj.velocity.x = obj.dir as f32* max_speed;
+        obj.velocity.x = obj.dir as f32 * max_speed;
         let nx = obj.x + obj.velocity.x * physics.dt; // new x
-        let ny = obj.y + obj.velocity.y* physics.dt; // new y
-    
+        let ny = obj.y + obj.velocity.y * physics.dt; // new y
+
         let ox = nx + obj.collider.x as f32; // for colliding purposes
         let oy = ny + obj.collider.y as f32;
         let ow = obj.collider.w;
         let oh = obj.collider.h;
         let mut is_colliding_x = false;
         let mut is_colliding_y = false;
-    
+
         for col in physics.colliders.iter() {
             if (ox as i32 + ow as i32) > (col.x as i32)
                 && (col.x as i32 + col.w as i32) > (ox as i32)
@@ -193,28 +197,54 @@ pub fn enemies_physics(physics: &PhysicsState, enemies: &mut EnemiesState){
                 obj.velocity.y = 0.0;
             }
         }
-    
+
         if !is_colliding_x {
             obj.x = nx;
         }
         if !is_colliding_y {
             obj.y = ny;
         }
-    
-        if obj.x < 0.0{
+
+        if obj.x < 0.0 {
             obj.x = 0.0;
         }
-        if obj.y < 0.0{
+        if obj.y < 0.0 {
             obj.y = 0.0;
         }
-
     }
 }
 
-pub fn count_dt(state: &mut PhysicsState){
+pub fn count_dt(state: &mut PhysicsState) {
     let now = std::time::Instant::now();
     state.dt = (now.duration_since(state.dt_timer).as_secs_f64()) as f32;
     state.dt_timer = std::time::Instant::now();
+}
+
+pub fn player_enemies_hit(player: &mut PlayerState, enemies: &mut EnemiesState) {
+    enemies.enemies.retain_mut(|enemy| {
+        if is_colliding(
+            player.x as i32,
+            player.y as i32,
+            player.width as i32,
+            player.height as i32,
+            enemy.x as i32,
+            enemy.y as i32,
+            enemy.width as i32,
+            enemy.height as i32,
+        ) {
+            if player.velocity.y > 0.0 {
+                // bounce the player
+                player.is_grounded = true;
+                player.jump_buffer_counter = 1.0;
+                // delete enemy
+                return false;
+            } else {
+                player.state = PlayerStateMachine::Dying;
+                return true;
+            }
+        }
+        return true;
+    });
 }
 
 pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
@@ -236,7 +266,7 @@ pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
     // JUMP AND GRAVITY = VELOCITY
 
     obj.acceleration.x = obj.wants_dir * accel;
-    if obj.state == PlayerStateMachine::Walking || obj.state == PlayerStateMachine::Falling{
+    if obj.state == PlayerStateMachine::Walking || obj.state == PlayerStateMachine::Falling {
         obj.added_velocity.x += obj.acceleration.x * dt;
     }
     obj.added_velocity.x = obj.added_velocity.x.clamp(-max_speed, max_speed);
@@ -332,18 +362,20 @@ pub fn player_physics(state: &PhysicsState, player: &mut PlayerState) {
         obj.y = ny;
     }
 
-    if obj.x < 0.0{
+    if obj.x < 0.0 {
         obj.x = 0.0;
     }
-    if obj.y < 0.0{
+    if obj.y < 0.0 {
         obj.y = 0.0;
     }
 
     // state
-    if is_falling && (obj.state == PlayerStateMachine::Walking || obj.state == PlayerStateMachine::Idling){
+    if is_falling
+        && (obj.state == PlayerStateMachine::Walking || obj.state == PlayerStateMachine::Idling)
+    {
         obj.state = PlayerStateMachine::Falling;
     }
-    if !is_falling && obj.state == PlayerStateMachine::Falling{
+    if !is_falling && obj.state == PlayerStateMachine::Falling {
         obj.state = PlayerStateMachine::Idling;
     }
 }

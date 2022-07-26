@@ -8,8 +8,8 @@ use r_i18n::I18n;
 use r_i18n::I18nConfig;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::EventPump;
 use sdl2::pixels::Color;
+use sdl2::EventPump;
 use std::collections::HashMap;
 
 mod render;
@@ -21,7 +21,7 @@ use crate::enemy::*;
 mod player;
 use crate::player::*;
 
-pub struct DialogState{
+pub struct DialogState {
     color: Color,
     font: usize,
     layout: Layout<Color>,
@@ -31,70 +31,93 @@ pub struct DialogState{
     finished: bool,
     show: bool,
     dialogues: JsonValue,
-
 }
 
-impl DialogState{
-    pub fn new() -> Self{
-        Self{
+impl DialogState {
+    pub fn new() -> Self {
+        Self {
             color: Color::GREEN,
             font: 0,
-            current_char:0,
+            current_char: 0,
             layout: Layout::new(fontdue::layout::CoordinateSystem::PositiveYDown),
             text: "".to_owned(),
-            texts: vec![],//vec!["asdf".to_owned(), "dfasdgasdg".to_owned(), "ahrhger".to_owned()],
+            texts: vec![], //vec!["asdf".to_owned(), "dfasdgasdg".to_owned(), "ahrhger".to_owned()],
             finished: false,
             show: false,
-            dialogues: json::parse(&std::fs::read_to_string("res/dialogues.json").unwrap()).unwrap(),
+            dialogues: json::parse(&std::fs::read_to_string("res/dialogues.json").unwrap())
+                .unwrap(),
         }
     }
 }
 
-pub fn apply_word_wrap_to_dialog(render: &RenderingState ,dialog: &mut DialogState){
-    if dialog.text.is_empty() {return};
+pub fn apply_word_wrap_to_dialog(render: &RenderingState, dialog: &mut DialogState) {
+    if dialog.text.is_empty() {
+        return;
+    };
     let (canvas_w, canvas_h) = render.canvas.logical_size();
     let margin = 5u32;
     let height = 70u32;
-    let font_size= 8.0;
-    let settings = LayoutSettings{ x: (margin + margin) as f32, y: (canvas_h-margin+margin-height) as f32, max_width: Some((canvas_w-4*margin) as f32), ..LayoutSettings::default() };
+    let font_size = 8.0;
+    let settings = LayoutSettings {
+        x: (margin + margin) as f32,
+        y: (canvas_h - margin + margin - height) as f32,
+        max_width: Some((canvas_w - 4 * margin) as f32),
+        ..LayoutSettings::default()
+    };
     dialog.layout.reset(&settings);
-    dialog.layout.append(render.fonts.as_slice(), &TextStyle::with_user_data(&dialog.text, font_size, dialog.font, Color::WHITE));
+    dialog.layout.append(
+        render.fonts.as_slice(),
+        &TextStyle::with_user_data(&dialog.text, font_size, dialog.font, Color::WHITE),
+    );
     let mut new_text = dialog.text.clone();
-    let mut new_line_places:Vec<_> = dialog.layout.lines().unwrap().iter().map(|e| e.glyph_end).collect();
+    let mut new_line_places: Vec<_> = dialog
+        .layout
+        .lines()
+        .unwrap()
+        .iter()
+        .map(|e| e.glyph_end)
+        .collect();
     new_line_places.pop();
-    for place in new_line_places.iter(){
+    for place in new_line_places.iter() {
         new_text = replace_nth_char(&new_text, *place, '\n');
     }
     dialog.text = new_text;
     fn replace_nth_char(s: &str, idx: usize, newchar: char) -> String {
-        s.chars().enumerate().map(|(i,c)| if i == idx { newchar } else { c }).collect()
+        s.chars()
+            .enumerate()
+            .map(|(i, c)| if i == idx { newchar } else { c })
+            .collect()
     }
 }
 
-pub fn update_dialog(dialog: &mut DialogState, input: &InputState, player: &mut PlayerState, render: &RenderingState){
+pub fn update_dialog(
+    dialog: &mut DialogState,
+    input: &InputState,
+    player: &mut PlayerState,
+    render: &RenderingState,
+) {
     dialog.show = true;
     let wants_to_continue = get_key_pressed(Keycode::Z, input);
     let wants_to_skip = get_key_pressed(Keycode::X, input);
 
-    if dialog.text.is_empty() && !dialog.texts.is_empty(){
+    if dialog.text.is_empty() && !dialog.texts.is_empty() {
         dialog.finished = false;
         dialog.text = dialog.texts.first().unwrap().clone();
         dialog.texts.remove(0);
         apply_word_wrap_to_dialog(render, dialog);
     }
-    if wants_to_skip{
+    if wants_to_skip {
         dialog.current_char = 999;
         dialog.finished = true;
     }
-    if dialog.texts.is_empty() && wants_to_continue && dialog.finished{
+    if dialog.texts.is_empty() && wants_to_continue && dialog.finished {
         dialog.finished = true;
         dialog.show = false;
         player.state = PlayerStateMachine::Idling;
         player.wants_to_interact = false;
         dialog.current_char = 0;
         dialog.text.clear();
-    }
-    else if wants_to_continue && dialog.finished{
+    } else if wants_to_continue && dialog.finished {
         dialog.finished = false;
         dialog.text = dialog.texts.first().unwrap().clone();
         dialog.texts.remove(0);
@@ -103,30 +126,40 @@ pub fn update_dialog(dialog: &mut DialogState, input: &InputState, player: &mut 
     }
 }
 
-pub fn set_dialog_from_id(id: u32, dialog: &mut DialogState, lang: &I18n){
-    match dialog.dialogues.clone(){
+pub fn set_dialog_from_id(id: u32, dialog: &mut DialogState, lang: &I18n) {
+    match dialog.dialogues.clone() {
         JsonValue::Object(whole) => {
             let objj = whole.get(&id.to_string()).unwrap();
-            match objj{
+            match objj {
                 JsonValue::Object(obj) => {
                     let _dialog_type = obj.get("type").unwrap().as_str().unwrap();
-                    let texts_array = if let JsonValue::Array(texts) = obj.get("texts").unwrap() {texts} else {panic!()};
-                    let texts: Vec<String> = texts_array.iter()
-                        .map(|text| if let JsonValue::Short(texte) = text {texte.as_str()} else {panic!()})
+                    let texts_array = if let JsonValue::Array(texts) = obj.get("texts").unwrap() {
+                        texts
+                    } else {
+                        panic!()
+                    };
+                    let texts: Vec<String> = texts_array
+                        .iter()
+                        .map(|text| {
+                            if let JsonValue::Short(texte) = text {
+                                texte.as_str()
+                            } else {
+                                panic!()
+                            }
+                        })
                         .map(|v| lang.t(v).as_str().unwrap().to_owned())
                         .collect();
 
                     dialog.texts = texts;
                     return;
-                },
-                _ => {},
+                }
+                _ => {}
             }
-        },
-        _=>{}
+        }
+        _ => {}
     }
     panic!("Failed to parse dialogues.json");
 }
-
 
 pub struct InputState {
     pub event_pump: EventPump,
@@ -194,10 +227,14 @@ pub fn main() -> Result<(), String> {
         let render_enemies_state = enemies_state.clone();
 
         input(&mut input_state);
-        if player_state.state == PlayerStateMachine::Talking{
-            update_dialog(&mut dialog_state, &input_state, &mut player_state, &rendering_state);
-        }
-        else{
+        if player_state.state == PlayerStateMachine::Talking {
+            update_dialog(
+                &mut dialog_state,
+                &input_state,
+                &mut player_state,
+                &rendering_state,
+            );
+        } else {
             move_player(&mut player_state, &input_state);
         }
         animate(&mut animation_state, &mut player_state, &mut enemies_state);
@@ -205,6 +242,7 @@ pub fn main() -> Result<(), String> {
         player_physics(&physics_state, &mut player_state);
         enemies_physics(&physics_state, &mut enemies_state);
         player_collision_interactables(&mut physics_state, &mut player_state);
+        player_enemies_hit(&mut player_state, &mut enemies_state);
 
         //println!("STATE: {:?}", player_state.state);
 
@@ -229,7 +267,14 @@ pub fn main() -> Result<(), String> {
         match interaction_result {
             InteractionResult::Nothing => {}
             InteractionResult::ChangeMap(new_map) => start_map = new_map,
-            InteractionResult::Inspect(inspect_id) => {set_dialog_from_id(inspect_id, &mut dialog_state, &lang)},
+            InteractionResult::Inspect(inspect_id) => {
+                set_dialog_from_id(inspect_id, &mut dialog_state, &lang)
+            }
+        }
+
+        if player_state.state == PlayerStateMachine::Dying{
+            start_map = switch_map(&mut loader, player_state.current_map.clone().as_str(), player_state.spawn_point.clone(), &lang, &mut rendering_state, &mut player_state, &mut enemies_state, &mut physics_state);
+            player_state.state = PlayerStateMachine::Idling;
         }
 
         let _frame_end_time = frame_timer.elapsed();
@@ -254,10 +299,13 @@ fn switch_map(
     physics: &mut PhysicsState,
 ) -> tiled::Map {
     let map = loader.load_tmx_map(path).unwrap();
+    player.spawn_point = spawn_number;
+    player.current_map = path.to_owned();
 
     render.text_hints.clear();
     physics.colliders.clear();
     physics.interactables.clear();
+    enemies.enemies.clear();
 
     load_tilemap_to_textures(render, &map);
     load_tilemap_to_text_hints(render, &map, &lang);
@@ -267,7 +315,6 @@ fn switch_map(
     load_player_spawn(player, &map, spawn_number);
     return map;
 }
-
 
 fn move_player(player: &mut PlayerState, input: &InputState) {
     let mut wanna_move = false;
@@ -284,12 +331,12 @@ fn move_player(player: &mut PlayerState, input: &InputState) {
     } else {
         player.wants_to_jump = false;
     }
-    if wanna_move{
-        if player.state == PlayerStateMachine::Idling{
+    if wanna_move {
+        if player.state == PlayerStateMachine::Idling {
             player.state = PlayerStateMachine::Walking;
         }
-    }else {
-        if player.state == PlayerStateMachine::Walking{
+    } else {
+        if player.state == PlayerStateMachine::Walking {
             player.state = PlayerStateMachine::Idling;
         }
         player.wants_dir = 0.0;

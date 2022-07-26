@@ -1,14 +1,20 @@
 use glam::Vec2;
 use r_i18n::I18n;
 
-use crate::{physics::{Collider, PhysicsState, Interactions}, switch_map, enemy::EnemiesState, render::{RenderingState, TilemapState}};
+use crate::{
+    enemy::EnemiesState,
+    physics::{Collider, Interactions, PhysicsState},
+    render::{RenderingState, TilemapState},
+    switch_map,
+};
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum PlayerStateMachine{
+pub enum PlayerStateMachine {
     Idling,
     Walking,
     Falling,
     Talking,
+    Dying,
 }
 
 #[derive(Clone)]
@@ -35,6 +41,8 @@ pub struct PlayerState {
     pub coyote_time_counter: f32,
     pub jump_buffer_counter: f32,
     pub can_interact: bool,
+    pub spawn_point: u32,
+    pub current_map: String,
 }
 
 impl PlayerState {
@@ -63,10 +71,11 @@ impl PlayerState {
             wants_to_interact: false,
             can_interact: false,
             state: PlayerStateMachine::Idling,
+            spawn_point: 0,
+            current_map: "".to_owned(),
         }
     }
 }
-
 
 pub fn load_player_spawn(player: &mut PlayerState, tile: &TilemapState, spawn: u32) {
     for layer in tile.layers() {
@@ -111,7 +120,11 @@ pub fn player_interact(
     enemies: &mut EnemiesState,
     physics: &mut PhysicsState,
 ) -> InteractionResult {
-    if player.can_interact && player.wants_to_interact && (player.state == PlayerStateMachine::Idling || player.state == PlayerStateMachine::Walking) {
+    if player.can_interact
+        && player.wants_to_interact
+        && (player.state == PlayerStateMachine::Idling
+            || player.state == PlayerStateMachine::Walking)
+    {
         let mut interactable = None;
         for int in physics.interactables.iter() {
             if int.is_in_collider {
@@ -127,7 +140,7 @@ pub fn player_interact(
                 return InteractionResult::ChangeMap(switch_map(
                     loader, &path, numb, lang, render, player, enemies, physics,
                 ));
-            },
+            }
             Interactions::Inspect(inspect_id) => {
                 player.state = PlayerStateMachine::Talking;
                 return InteractionResult::Inspect(inspect_id);
