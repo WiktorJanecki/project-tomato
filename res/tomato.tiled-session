@@ -18,14 +18,14 @@
         },
         "startmenu.tmx": {
             "expandedObjectLayers": [
-                5,
-                2
+                2,
+                5
             ],
             "scale": 5.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 160,
-                "y": 179.9090909090909
+                "x": 64,
+                "y": 248
             }
         },
         "startmenu.tsx": {
@@ -33,11 +33,15 @@
             "scaleInEditor": 11
         },
         "testmap.tmx": {
-            "scale": 3,
-            "selectedLayer": 3,
+            "expandedObjectLayers": [
+                6,
+                5
+            ],
+            "scale": 2,
+            "selectedLayer": 4,
             "viewCenter": {
-                "x": 199.99999999999997,
-                "y": 159.83333333333331
+                "x": 720,
+                "y": 284
             }
         },
         "textmap.tmx": {
